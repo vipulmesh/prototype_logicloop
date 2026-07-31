@@ -11,6 +11,25 @@ export interface ResumeAnalysis {
   recommendations: string[];
 }
 
+export interface CandidateProject {
+  id: string;
+  title: string;
+  description: string;
+  technologies: string[];
+  role: string;
+  keyFeatures: string[];
+  duration?: string;
+  githubUrl?: string;
+  liveDemoUrl?: string;
+
+  // AI insights
+  innovationScore: number; // 0-100
+  technicalComplexity: number; // 0-100
+  problemSolvingScore: number; // 0-100
+  industryRelevance: number; // 0-100
+  recruiterSummary: string;
+}
+
 export interface TalentReport {
   overallScore: number;
   atsScore: number;
@@ -28,6 +47,7 @@ export interface TalentReport {
   recruiterSummary: string;
   interviewReadiness: number;
   interviewQuestions: string[];
+  projects?: CandidateProject[];
 }
 
 /* ─── Skill Breakdown ─── */

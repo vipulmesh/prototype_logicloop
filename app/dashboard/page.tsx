@@ -19,11 +19,17 @@ import {
   Github,
   GitPullRequest,
   GitCommit,
-  Activity
+  Activity,
+  FolderGit2,
+  Plus
 } from 'lucide-react';
 import { Badge, Button, Card, Progress, ScoreCircle } from '@/components/ui';
 import { consumeResumeAnalysisRequest, getCachedAnalysis, saveCachedAnalysis, type ResumeFingerprint } from '@/lib/analysis-cache';
-import type { TalentReport } from '@/types';
+import { getVerifiedSkillProfile } from '@/lib/skill-verification';
+import { extractProjectsFromReport } from '@/lib/project-extraction';
+import { ProjectCard } from '@/components/ProjectCard';
+import { ProjectFormModal } from '@/components/ProjectFormModal';
+import type { TalentReport, CandidateProject } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface StoredResume {
@@ -69,34 +75,6 @@ const getHash = (str: string) => {
   return Math.abs(hash);
 };
 
-const getSkillVerification = (report: TalentReport) => {
-  const verified = report.technicalSkills.map((skill) => {
-    const isStrength = report.strengths.some(s => s.toLowerCase().includes(skill.toLowerCase()));
-    const inExp = report.experienceSummary.toLowerCase().includes(skill.toLowerCase());
-    const hash = getHash(skill);
-    
-    let category = 'Beginner';
-    let confidence = 40 + (hash % 20); // 40-59
-
-    if (isStrength) {
-      category = 'Advanced';
-      confidence = 85 + (hash % 15); // 85-99
-    } else if (inExp) {
-      category = 'Intermediate';
-      confidence = 70 + (hash % 15); // 70-84
-    } else if (report.candidateLevel === 'Senior' || report.candidateLevel === 'Mid') {
-      category = 'Intermediate';
-      confidence = 60 + (hash % 10); // 60-69
-    }
-
-    return { name: skill, category, confidence };
-  }).sort((a, b) => b.confidence - a.confidence);
-
-  const overallConfidence = verified.length ? Math.round(verified.reduce((acc, curr) => acc + curr.confidence, 0) / verified.length) : 0;
-  
-  return { verified, overallConfidence };
-};
-
 const getMockTeamContribution = () => {
   return {
     score: 88,
@@ -115,6 +93,9 @@ const getMockTeamContribution = () => {
 export default function DashboardPage() {
   const [resume, setResume] = useState<StoredResume | null>(null);
   const [report, setReport] = useState<TalentReport | null>(null);
+  const [projects, setProjects] = useState<CandidateProject[]>([]);
+  const [editingProject, setEditingProject] = useState<CandidateProject | null>(null);
+  const [isAddingProject, setIsAddingProject] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [lastAnalyzed, setLastAnalyzed] = useState<string | null>(null);
@@ -178,7 +159,39 @@ export default function DashboardPage() {
     }
   }, []);
 
-  const skillVerifications = report ? getSkillVerification(report) : null;
+  useEffect(() => {
+    if (report) {
+      const extracted = extractProjectsFromReport(report, resume?.text);
+      setProjects(extracted);
+    }
+  }, [report, resume?.text]);
+
+  const handleSaveProject = (updatedProject: CandidateProject) => {
+    if (!report || !resume) return;
+    const existingIdx = projects.findIndex((p) => p.id === updatedProject.id);
+    let nextProjects: CandidateProject[];
+    if (existingIdx >= 0) {
+      nextProjects = [...projects];
+      nextProjects[existingIdx] = updatedProject;
+    } else {
+      nextProjects = [updatedProject, ...projects];
+    }
+    setProjects(nextProjects);
+    const updatedReport: TalentReport = { ...report, projects: nextProjects };
+    setReport(updatedReport);
+    saveCachedAnalysis(updatedReport, resume.fingerprint);
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+    if (!report || !resume) return;
+    const nextProjects = projects.filter((p) => p.id !== projectId);
+    setProjects(nextProjects);
+    const updatedReport: TalentReport = { ...report, projects: nextProjects };
+    setReport(updatedReport);
+    saveCachedAnalysis(updatedReport, resume.fingerprint);
+  };
+
+  const skillProfile = report ? getVerifiedSkillProfile(report) : null;
   const teamContribution = getMockTeamContribution();
 
   return (
@@ -269,49 +282,153 @@ export default function DashboardPage() {
             <Card className="border border-primary/30">
               <div className="flex flex-col md:flex-row justify-between gap-5 mb-6">
                 <div>
-                  <h2 className="flex items-center gap-2 text-xl font-bold text-white"><ShieldCheck className="text-primary" /> AI Skill Verification</h2>
-                  <p className="mt-2 text-sm text-slate-400">Your skills verified and categorized based on resume context and experience signals.</p>
+                  <div className="flex items-center gap-2">
+                    <h2 className="flex items-center gap-2 text-xl font-bold text-white"><ShieldCheck className="text-primary" /> AI Skill Verification Profile</h2>
+                    <Badge variant="accent">{skillProfile?.candidateLevel} Level</Badge>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-400">Verified skill profile generated from cached AI resume analysis context.</p>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="text-center">
-                    <p className="text-xs uppercase tracking-wider text-slate-400 font-medium">Verification Score</p>
-                    <p className="text-3xl font-bold text-emerald-400">{skillVerifications?.overallConfidence}%</p>
+                  <div className="text-center bg-black/30 px-4 py-2 rounded-xl border border-border">
+                    <p className="text-xs uppercase tracking-wider text-slate-400 font-medium">Skill Confidence Score</p>
+                    <p className="text-3xl font-bold text-emerald-400">{skillProfile?.overallConfidence}%</p>
                   </div>
                 </div>
               </div>
-              
-              <div className="grid gap-6 lg:grid-cols-2 border-t border-border pt-6">
-                <div>
-                  <h3 className="text-md font-semibold mb-4 text-white">Verified Skills Directory</h3>
-                  <div className="space-y-3">
-                    {skillVerifications?.verified.map((skill) => (
-                      <div key={skill.name} className="flex items-center justify-between bg-black/20 p-3 rounded-lg border border-border">
-                        <div className="flex items-center gap-3">
-                           <Badge variant={skill.category === 'Advanced' ? 'success' : skill.category === 'Intermediate' ? 'accent' : 'default'} className="w-24 justify-center text-xs">
-                             {skill.category}
-                           </Badge>
-                           <span className="font-medium text-sm text-white">{skill.name}</span>
-                        </div>
-                        <span className="text-xs font-semibold text-slate-400">{skill.confidence}% Verified</span>
+
+              {/* Top 5 Strongest Skills */}
+              {skillProfile?.topStrongestSkills.length ? (
+                <div className="mb-6 rounded-xl bg-black/20 p-4 border border-border">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300 mb-3 flex items-center gap-2">
+                    <Sparkles size={14} className="text-amber-400" /> Top 5 Strongest Verified Skills
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {skillProfile.topStrongestSkills.map((skill) => (
+                      <div key={skill.name} className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-lg">
+                        <span className="text-sm font-semibold text-white">{skill.name}</span>
+                        <Badge variant="success" className="text-[10px] px-1.5 py-0">{skill.level}</Badge>
+                        <span className="text-xs font-bold text-emerald-400">{skill.confidence}%</span>
                       </div>
                     ))}
                   </div>
                 </div>
+              ) : null}
+              
+              <div className="grid gap-6 lg:grid-cols-2 border-t border-border pt-6">
+                {/* Verified Technical Skills */}
+                <div>
+                  <h3 className="text-md font-semibold mb-4 text-white flex items-center justify-between">
+                    <span>Verified Technical Skills</span>
+                    <Badge variant="default">{skillProfile?.verifiedTechnicalSkills.length || 0} Skills</Badge>
+                  </h3>
+                  <div className="space-y-2.5">
+                    {skillProfile?.verifiedTechnicalSkills.length ? (
+                      skillProfile.verifiedTechnicalSkills.map((skill) => (
+                        <div key={skill.name} className="flex items-center justify-between bg-black/20 p-3 rounded-lg border border-border">
+                          <div className="flex items-center gap-3">
+                             <Badge variant={skill.level === 'Advanced' ? 'success' : skill.level === 'Intermediate' ? 'accent' : 'default'} className="w-24 justify-center text-xs">
+                               {skill.level}
+                             </Badge>
+                             <span className="font-medium text-sm text-white">{skill.name}</span>
+                          </div>
+                          <span className="text-xs font-semibold text-slate-400">{skill.confidence}% Verified</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No technical skills detected.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Verified Soft Skills & Skills to Improve */}
                 <div className="space-y-6">
                    <div>
-                     <h3 className="text-md font-semibold mb-4 text-white">Core Strengths</h3>
-                     <ReportList items={report.strengths} />
+                     <h3 className="text-md font-semibold mb-4 text-white flex items-center justify-between">
+                       <span>Verified Soft Skills</span>
+                       <Badge variant="accent">{skillProfile?.verifiedSoftSkills.length || 0} Skills</Badge>
+                     </h3>
+                     <div className="space-y-2.5">
+                       {skillProfile?.verifiedSoftSkills.length ? (
+                         skillProfile.verifiedSoftSkills.map((skill) => (
+                           <div key={skill.name} className="flex items-center justify-between bg-black/20 p-3 rounded-lg border border-border">
+                             <div className="flex items-center gap-3">
+                                <Badge variant={skill.level === 'Advanced' ? 'success' : skill.level === 'Intermediate' ? 'accent' : 'default'} className="w-24 justify-center text-xs">
+                                  {skill.level}
+                                </Badge>
+                                <span className="font-medium text-sm text-white">{skill.name}</span>
+                             </div>
+                             <span className="text-xs font-semibold text-slate-400">{skill.confidence}% Verified</span>
+                           </div>
+                         ))
+                       ) : (
+                         <p className="text-sm text-muted-foreground">No soft skills detected.</p>
+                       )}
+                     </div>
                    </div>
+
                    <div>
-                     <h3 className="text-md font-semibold mb-4 text-white">Missing & Improvement Areas</h3>
-                     <SkillBadges skills={report.missingSkills} variant="warning" />
+                     <h3 className="text-md font-semibold mb-3 text-white">Skills to Improve</h3>
+                     <SkillBadges skills={skillProfile?.skillsToImprove || []} variant="warning" />
                      <div className="mt-4">
-                       <ReportList items={report.improvementSuggestions} />
+                       <ReportList items={report.improvementSuggestions || []} />
                      </div>
                    </div>
                 </div>
               </div>
             </Card>
+
+            {/* AI Project Extraction Module */}
+            <Card className="border border-primary/30">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <div>
+                  <h2 className="flex items-center gap-2 text-xl font-bold text-white">
+                    <FolderGit2 className="text-primary" /> Extracted Candidate Projects
+                  </h2>
+                  <p className="mt-1.5 text-sm text-slate-400">
+                    AI-extracted projects and technical complexity metrics parsed from your resume.
+                  </p>
+                </div>
+                <Button size="sm" onClick={() => setIsAddingProject(true)}>
+                  <Plus size={15} /> Add Project Manually
+                </Button>
+              </div>
+
+              {projects.length > 0 ? (
+                <div className="grid gap-5">
+                  {projects.map((proj) => (
+                    <ProjectCard
+                      key={proj.id}
+                      project={proj}
+                      onEdit={(p) => setEditingProject(p)}
+                      onDelete={(id) => handleDeleteProject(id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 bg-black/20 rounded-2xl border border-dashed border-border p-6">
+                  <FolderGit2 className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+                  <h3 className="text-lg font-semibold text-white">No Projects Detected</h3>
+                  <p className="mt-1 text-sm text-slate-400 max-w-md mx-auto">
+                    No projects were automatically parsed from this resume. You can manually add your projects to showcase your technical build portfolio to recruiters.
+                  </p>
+                  <Button className="mt-4" onClick={() => setIsAddingProject(true)}>
+                    <Plus size={15} /> Add Your First Project
+                  </Button>
+                </div>
+              )}
+            </Card>
+
+            {/* Project Edit/Add Modal */}
+            {(editingProject || isAddingProject) && (
+              <ProjectFormModal
+                project={editingProject}
+                onSave={handleSaveProject}
+                onClose={() => {
+                  setEditingProject(null);
+                  setIsAddingProject(false);
+                }}
+              />
+            )}
 
             {/* Team Contribution Analytics Module */}
             <Card>

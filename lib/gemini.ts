@@ -28,11 +28,29 @@ Use exactly these fields:
   "improvementSuggestions": [],
   "recruiterSummary": "",
   "interviewReadiness": 0,
-  "interviewQuestions": []
+  "interviewQuestions": [],
+  "projects": [
+    {
+      "id": "proj_1",
+      "title": "Project Title",
+      "description": "Short Description",
+      "technologies": ["React", "TypeScript"],
+      "role": "Lead Engineer",
+      "keyFeatures": ["Key feature 1", "Key feature 2"],
+      "duration": "4 Months",
+      "githubUrl": "",
+      "liveDemoUrl": "",
+      "innovationScore": 85,
+      "technicalComplexity": 88,
+      "problemSolvingScore": 86,
+      "industryRelevance": 90,
+      "recruiterSummary": "Detailed recruiter summary for the project."
+    }
+  ]
 }
 
 Scores must be integers from 0 to 100. candidateLevel must be one of Fresher, Junior, Mid, Senior.
-Be specific to evidence in the resume. Provide exactly 10 personalized interviewQuestions.`;
+Extract candidate projects if present in the resume. Provide exactly 10 personalized interviewQuestions.`;
 
 function asString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
@@ -75,6 +93,24 @@ function parseReport(text: string): TalentReport {
     throw new Error('Gemini returned an incomplete analysis response. Please try again.');
   }
 
+  const rawProjects = Array.isArray(report.projects) ? report.projects : [];
+  const projects = rawProjects.map((p: any, idx: number) => ({
+    id: asString(p.id) || `proj_${idx}_${Date.now()}`,
+    title: asString(p.title) || `Project ${idx + 1}`,
+    description: asString(p.description) || 'Candidate project',
+    technologies: asStringArray(p.technologies),
+    role: asString(p.role) || 'Developer',
+    keyFeatures: asStringArray(p.keyFeatures),
+    duration: asString(p.duration) || '3 Months',
+    githubUrl: asString(p.githubUrl) || undefined,
+    liveDemoUrl: asString(p.liveDemoUrl) || undefined,
+    innovationScore: asScore(p.innovationScore) || 80,
+    technicalComplexity: asScore(p.technicalComplexity) || 80,
+    problemSolvingScore: asScore(p.problemSolvingScore) || 80,
+    industryRelevance: asScore(p.industryRelevance) || 85,
+    recruiterSummary: asString(p.recruiterSummary) || 'Extracted candidate project details.',
+  }));
+
   return {
     overallScore: asScore(report.overallScore),
     atsScore: asScore(report.atsScore),
@@ -92,6 +128,7 @@ function parseReport(text: string): TalentReport {
     recruiterSummary: asString(report.recruiterSummary),
     interviewReadiness: asScore(report.interviewReadiness),
     interviewQuestions,
+    projects: projects.length ? projects : undefined,
   };
 }
 
