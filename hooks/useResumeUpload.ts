@@ -14,6 +14,7 @@ interface UseResumeUploadReturn {
   lastModified: number | null;
   extractedText: string | null;
   pageCount: number | null;
+  fileData: string | null;
   error: string | null;
   upload: (file: File) => Promise<void>;
   reset: () => void;
@@ -26,6 +27,7 @@ export function useResumeUpload(): UseResumeUploadReturn {
   const [lastModified, setLastModified] = useState<number | null>(null);
   const [extractedText, setExtractedText] = useState<string | null>(null);
   const [pageCount, setPageCount] = useState<number | null>(null);
+  const [fileData, setFileData] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const reset = useCallback(() => {
@@ -35,6 +37,7 @@ export function useResumeUpload(): UseResumeUploadReturn {
     setLastModified(null);
     setExtractedText(null);
     setPageCount(null);
+    setFileData(null);
     setError(null);
   }, []);
 
@@ -45,6 +48,14 @@ export function useResumeUpload(): UseResumeUploadReturn {
       setFileSize(file.size);
       setLastModified(file.lastModified);
       setStatus('uploading');
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (typeof e.target?.result === 'string') {
+          setFileData(e.target.result);
+        }
+      };
+      reader.readAsDataURL(file);
 
       // Simulate slight delay for UX
       await new Promise((r) => setTimeout(r, 400));
@@ -82,6 +93,7 @@ export function useResumeUpload(): UseResumeUploadReturn {
     lastModified,
     extractedText,
     pageCount,
+    fileData,
     error,
     upload,
     reset,

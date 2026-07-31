@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -43,10 +43,22 @@ export default function UploadPage() {
     lastModified,
     extractedText,
     pageCount,
+    fileData,
     error,
     upload,
     reset,
   } = useResumeUpload();
+
+  // Redirect to dashboard if a resume already exists and the replace flag is not set
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('replace')) {
+      const saved = localStorage.getItem('talentai_resume') || sessionStorage.getItem('talentai_resume');
+      if (saved) {
+        router.push('/dashboard');
+      }
+    }
+  }, [router]);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -76,6 +88,7 @@ export default function UploadPage() {
         fileSize,
         lastModified,
         pageCount,
+        fileData,
         fingerprint,
       };
       // Persist the extracted resume so the cached report can be reused after future visits.

@@ -31,6 +31,7 @@ interface StoredResume {
   fileName: string | null;
   fileSize: number | null;
   lastModified: number | null;
+  fileData?: string | null;
   fingerprint: ResumeFingerprint;
 }
 
@@ -192,13 +193,45 @@ export default function DashboardPage() {
           </div>
           <span className="text-xl font-bold tracking-tight">TalentAI</span>
         </Link>
-        <div className="flex gap-2"><Link href="/pitch"><Button variant="ghost" size="sm">Pitch Analyzer</Button></Link><Link href="/jobs"><Button variant="ghost" size="sm">Browse jobs</Button></Link><Link href="/upload"><Button variant="ghost" size="sm"><ArrowLeft size={15} /> New resume</Button></Link></div>
+        <div className="flex gap-2"><Link href="/pitch"><Button variant="ghost" size="sm">Pitch Analyzer</Button></Link><Link href="/jobs"><Button variant="ghost" size="sm">Browse jobs</Button></Link><Link href="/upload?replace=true"><Button variant="ghost" size="sm"><ArrowLeft size={15} /> Replace Resume</Button></Link></div>
       </nav>
 
       <main className="relative z-10 mx-auto max-w-7xl px-6 pb-20 pt-8">
         <Badge variant="default" className="px-4 py-1.5"><Sparkles size={13} className="mr-1.5" />AI Talent Report</Badge>
         <h1 className="mt-5 text-3xl font-bold md:text-4xl">Your resume intelligence report</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-slate-400"><p>{resume?.fileName || 'Resume'} · Gemini-powered recruiter and ATS analysis</p><span className="text-xs text-muted-foreground">Analysis status: {isLoading ? 'Analyzing' : report ? 'Complete' : 'Unavailable'}</span>{lastAnalyzed && <span className="text-xs text-muted-foreground">Last analyzed {new Date(lastAnalyzed).toLocaleString()}</span>}{report && <Button variant="ghost" size="sm" onClick={() => resume && void analyzeResume(resume)}>Re-analyze Resume</Button>}</div>
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-slate-400">
+          <p>{resume?.fileName || 'Resume'} · Gemini-powered recruiter and ATS analysis</p>
+          <span className="text-xs text-muted-foreground">Analysis status: {isLoading ? 'Analyzing' : report ? 'Complete' : 'Unavailable'}</span>
+          {lastAnalyzed && <span className="text-xs text-muted-foreground">Last analyzed {new Date(lastAnalyzed).toLocaleString()}</span>}
+          {report && (
+            <>
+              {resume?.fileData && (
+                <>
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    const w = window.open('about:blank');
+                    if (w && resume.fileData) {
+                      w.document.write(`<iframe src="${resume.fileData}" style="width:100%;height:100%;border:none;"></iframe>`);
+                    }
+                  }}>
+                    View Resume
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    if (resume.fileData) {
+                      const a = document.createElement('a');
+                      a.href = resume.fileData;
+                      a.download = resume.fileName || 'resume';
+                      a.click();
+                    }
+                  }}>
+                    Download Resume
+                  </Button>
+                </>
+              )}
+              <Link href="/upload?replace=true"><Button variant="ghost" size="sm">Replace Resume</Button></Link>
+              <Button variant="ghost" size="sm" onClick={() => resume && void analyzeResume(resume)}>Re-analyze Resume</Button>
+            </>
+          )}
+        </div>
 
         {isLoading && (
           <Card className="mt-8 flex min-h-64 flex-col items-center justify-center text-center">
