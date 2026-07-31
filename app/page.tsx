@@ -7,6 +7,7 @@ import {
   ArrowRight,
   FileText,
   BarChart3,
+  BriefcaseBusiness,
   Target,
   Sparkles,
   Zap,
@@ -79,11 +80,10 @@ export default function LandingPage() {
           </div>
           <span className="text-xl font-bold tracking-tight">TalentAI</span>
         </div>
-        <Link href="/upload">
-          <Button size="sm">
-            Get Started <ArrowRight size={15} />
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/upload"><Button variant="ghost" size="sm">Continue as Candidate</Button></Link>
+          <Link href="/recruiter"><Button size="sm">Continue as Recruiter</Button></Link>
+        </div>
       </nav>
 
       {/* ─── Hero Section ─── */}
@@ -119,17 +119,13 @@ export default function LandingPage() {
             Google Gemini.
           </motion.p>
 
-          <motion.div custom={3} variants={fadeUp} className="mt-10 flex gap-4">
+          <motion.div custom={3} variants={fadeUp} className="mt-10 flex flex-col gap-4 sm:flex-row">
             <Link href="/upload">
-              <Button size="lg">
-                Upload Resume <ArrowRight size={17} />
-              </Button>
+              <Button size="lg">Continue as Candidate <ArrowRight size={17} /></Button>
             </Link>
-            <a href="#features">
-              <Button variant="ghost" size="lg">
-                See Features
-              </Button>
-            </a>
+            <Link href="/recruiter">
+              <Button variant="ghost" size="lg">Continue as Recruiter <BriefcaseBusiness size={17} /></Button>
+            </Link>
           </motion.div>
 
           {/* ─── Stats Row ─── */}

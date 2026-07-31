@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Button, Card, Badge } from '@/components/ui';
 import { useResumeUpload } from '@/hooks/useResumeUpload';
+import { clearCachedAnalysis, markResumeForAnalysis } from '@/lib/analysis-cache';
 import { cn } from '@/lib/utils';
 
 /* ─── Status Steps ─── */
@@ -67,6 +68,7 @@ export default function UploadPage() {
 
   const handleAnalyze = () => {
     if (extractedText) {
+      clearCachedAnalysis();
       // Store in sessionStorage to pass to the dashboard
       sessionStorage.setItem(
         'talentai_resume',
@@ -77,6 +79,7 @@ export default function UploadPage() {
           pageCount,
         }),
       );
+      markResumeForAnalysis();
       router.push('/dashboard');
     }
   };

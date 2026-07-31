@@ -35,11 +35,16 @@ export async function POST(req: NextRequest) {
     let pages = 1; // Default for DOCX
 
     if (isPDF) {
-      const pdfParseModule = await import('pdf-parse');
-      const pdfParse = (pdfParseModule as any).default || pdfParseModule;
-      const parsed = await pdfParse(buffer);
-      text = parsed.text?.trim();
-      pages = parsed.numpages;
+      const { PDFParse } = await import('pdf-parse');
+      const parser = new PDFParse({ data: buffer });
+
+      try {
+        const parsed = await parser.getText();
+        text = parsed.text?.trim();
+        pages = parsed.total;
+      } finally {
+        await parser.destroy();
+      }
     } else if (isDOCX) {
       const mammothModule = await import('mammoth');
       const mammoth = (mammothModule as any).default || mammothModule;
@@ -61,8 +66,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('File extraction error:', error);
+    const message = error instanceof Error ? error.message : 'Unknown extraction error';
+
     return NextResponse.json(
-      { error: 'Failed to process the uploaded file' },
+      { error: message },
       { status: 500 },
     );
   }

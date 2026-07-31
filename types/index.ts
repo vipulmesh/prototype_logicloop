@@ -11,6 +11,25 @@ export interface ResumeAnalysis {
   recommendations: string[];
 }
 
+export interface TalentReport {
+  overallScore: number;
+  atsScore: number;
+  candidateLevel: 'Fresher' | 'Junior' | 'Mid' | 'Senior';
+  technicalSkills: string[];
+  softSkills: string[];
+  strengths: string[];
+  weaknesses: string[];
+  missingSkills: string[];
+  experienceSummary: string;
+  educationSummary: string;
+  recommendedRoles: string[];
+  jobMatchSuggestions: string[];
+  improvementSuggestions: string[];
+  recruiterSummary: string;
+  interviewReadiness: number;
+  interviewQuestions: string[];
+}
+
 /* ─── Skill Breakdown ─── */
 export interface SkillBreakdown {
   name: string;
@@ -28,6 +47,19 @@ export interface Job {
   salary: string;
   skills: string[];
   description: string;
+}
+
+export interface JobApplication {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  candidateName: string;
+  resumeName: string;
+  talentScore: number;
+  atsScore: number;
+  skills: string[];
+  appliedAt: string;
+  status: 'Applied' | 'Shortlisted' | 'Rejected';
 }
 
 /* ─── Job Match ─── */
