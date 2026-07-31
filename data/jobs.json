@@ -1,0 +1,102 @@
+[
+  {
+    "id": "j1",
+    "title": "Senior Full Stack Engineer",
+    "company": "Nexora Labs",
+    "location": "Remote",
+    "type": "Full-time",
+    "salary": "$130k – $180k",
+    "skills": ["React", "Node.js", "TypeScript", "PostgreSQL", "AWS"],
+    "description": "Build scalable web applications using modern JavaScript frameworks. Lead frontend architecture decisions and mentor junior developers."
+  },
+  {
+    "id": "j2",
+    "title": "AI/ML Engineer",
+    "company": "Vantage AI",
+    "location": "Bengaluru, IN",
+    "type": "Full-time",
+    "salary": "₹25L – ₹40L",
+    "skills": ["Python", "TensorFlow", "PyTorch", "MLOps", "Docker"],
+    "description": "Design and deploy machine learning models for production systems. Work on NLP, computer vision, and recommendation engines."
+  },
+  {
+    "id": "j3",
+    "title": "Product Designer",
+    "company": "PixelFoundry",
+    "location": "London, UK",
+    "type": "Full-time",
+    "salary": "£65k – £90k",
+    "skills": ["Figma", "User Research", "Prototyping", "Design Systems", "CSS"],
+    "description": "Own the end-to-end design process for B2B SaaS products. Conduct user research and translate insights into delightful interfaces."
+  },
+  {
+    "id": "j4",
+    "title": "DevOps Engineer",
+    "company": "Cloudscale",
+    "location": "Austin, US",
+    "type": "Full-time",
+    "salary": "$120k – $160k",
+    "skills": ["Kubernetes", "Terraform", "CI/CD", "AWS", "Linux"],
+    "description": "Automate infrastructure provisioning and manage cloud deployments. Ensure 99.99% uptime for mission-critical services."
+  },
+  {
+    "id": "j5",
+    "title": "Frontend Engineer",
+    "company": "Orbit Systems",
+    "location": "Berlin, DE",
+    "type": "Contract",
+    "salary": "€70k – €95k",
+    "skills": ["React", "Next.js", "TypeScript", "Tailwind CSS", "Testing"],
+    "description": "Build pixel-perfect, accessible user interfaces for a fintech platform. Collaborate closely with designers and backend engineers."
+  },
+  {
+    "id": "j6",
+    "title": "Data Scientist",
+    "company": "Quantis Analytics",
+    "location": "Remote",
+    "type": "Full-time",
+    "salary": "$110k – $150k",
+    "skills": ["Python", "SQL", "Pandas", "Machine Learning", "Statistics"],
+    "description": "Analyze large datasets to extract actionable business insights. Build predictive models and present findings to stakeholders."
+  },
+  {
+    "id": "j7",
+    "title": "Backend Engineer",
+    "company": "Nexora Labs",
+    "location": "New York, US",
+    "type": "Full-time",
+    "salary": "$140k – $190k",
+    "skills": ["Go", "PostgreSQL", "Redis", "gRPC", "Docker"],
+    "description": "Design and build high-throughput APIs serving millions of requests. Own service reliability and performance optimization."
+  },
+  {
+    "id": "j8",
+    "title": "Mobile Developer",
+    "company": "AppForge",
+    "location": "Bengaluru, IN",
+    "type": "Full-time",
+    "salary": "₹18L – ₹30L",
+    "skills": ["React Native", "TypeScript", "iOS", "Android", "Firebase"],
+    "description": "Build cross-platform mobile apps for consumer-facing products. Focus on performance, offline support, and smooth animations."
+  },
+  {
+    "id": "j9",
+    "title": "Cloud Architect",
+    "company": "Cloudscale",
+    "location": "Remote",
+    "type": "Full-time",
+    "salary": "$160k – $210k",
+    "skills": ["AWS", "Azure", "Terraform", "Security", "Microservices"],
+    "description": "Design cloud-native architectures for enterprise clients. Lead migration strategies and ensure compliance with industry standards."
+  },
+  {
+    "id": "j10",
+    "title": "Cybersecurity Analyst",
+    "company": "ShieldNet",
+    "location": "London, UK",
+    "type": "Full-time",
+    "salary": "£55k – £80k",
+    "skills": ["Network Security", "SIEM", "Penetration Testing", "Python", "Compliance"],
+    "description": "Monitor and respond to security incidents. Conduct vulnerability assessments and implement security best practices across the organization."
+  }
+]
