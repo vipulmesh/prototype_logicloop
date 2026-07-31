@@ -17,12 +17,15 @@ import {
   Target,
 } from 'lucide-react';
 import { Badge, Button, Card, Progress, ScoreCircle } from '@/components/ui';
-import { consumeResumeAnalysisRequest, getCachedAnalysis, saveCachedAnalysis } from '@/lib/analysis-cache';
+import { consumeResumeAnalysisRequest, getCachedAnalysis, saveCachedAnalysis, type ResumeFingerprint } from '@/lib/analysis-cache';
 import type { TalentReport } from '@/types';
 
 interface StoredResume {
   text: string;
   fileName: string | null;
+  fileSize: number | null;
+  lastModified: number | null;
+  fingerprint: ResumeFingerprint;
 }
 
 function ReportList({ items, empty = 'No signals found.' }: { items: string[]; empty?: string }) {
@@ -77,7 +80,7 @@ export default function DashboardPage() {
       }
 
       const talentReport = data.report as TalentReport;
-      const cached = saveCachedAnalysis(talentReport);
+      const cached = saveCachedAnalysis(talentReport, storedResume.fingerprint);
       setReport(cached.report);
       setLastAnalyzed(cached.analyzedAt);
     } catch (analysisError) {
@@ -88,7 +91,7 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    const savedResume = sessionStorage.getItem('talentai_resume');
+    const savedResume = localStorage.getItem('talentai_resume') || sessionStorage.getItem('talentai_resume');
     if (!savedResume) {
       setError('Upload a resume before requesting an analysis.');
       setIsLoading(false);
@@ -97,9 +100,9 @@ export default function DashboardPage() {
 
     try {
       const parsed = JSON.parse(savedResume) as StoredResume;
-      if (!parsed.text || typeof parsed.text !== 'string') throw new Error();
+      if (!parsed.text || typeof parsed.text !== 'string' || !parsed.fingerprint) throw new Error();
       setResume(parsed);
-      const cached = getCachedAnalysis();
+      const cached = getCachedAnalysis(parsed.fingerprint);
       if (cached) {
         setReport(cached.report);
         setLastAnalyzed(cached.analyzedAt);
@@ -134,7 +137,7 @@ export default function DashboardPage() {
       <main className="relative z-10 mx-auto max-w-7xl px-6 pb-20 pt-8">
         <Badge variant="default" className="px-4 py-1.5"><Sparkles size={13} className="mr-1.5" />AI Talent Report</Badge>
         <h1 className="mt-5 text-3xl font-bold md:text-4xl">Your resume intelligence report</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-slate-400"><p>{resume?.fileName || 'Resume'} · Gemini-powered recruiter and ATS analysis</p>{lastAnalyzed && <span className="text-xs text-muted-foreground">Last analyzed {new Date(lastAnalyzed).toLocaleString()}</span>}{report && <Button variant="ghost" size="sm" onClick={() => resume && void analyzeResume(resume)}>Re-analyze Resume</Button>}</div>
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-slate-400"><p>{resume?.fileName || 'Resume'} · Gemini-powered recruiter and ATS analysis</p><span className="text-xs text-muted-foreground">Analysis status: {isLoading ? 'Analyzing' : report ? 'Complete' : 'Unavailable'}</span>{lastAnalyzed && <span className="text-xs text-muted-foreground">Last analyzed {new Date(lastAnalyzed).toLocaleString()}</span>}{report && <Button variant="ghost" size="sm" onClick={() => resume && void analyzeResume(resume)}>Re-analyze Resume</Button>}</div>
 
         {isLoading && (
           <Card className="mt-8 flex min-h-64 flex-col items-center justify-center text-center">

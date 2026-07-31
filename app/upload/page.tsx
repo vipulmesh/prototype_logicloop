@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Button, Card, Badge } from '@/components/ui';
 import { useResumeUpload } from '@/hooks/useResumeUpload';
-import { clearCachedAnalysis, markResumeForAnalysis } from '@/lib/analysis-cache';
+import { getCachedAnalysis, markResumeForAnalysis } from '@/lib/analysis-cache';
 import { cn } from '@/lib/utils';
 
 /* ─── Status Steps ─── */
@@ -40,6 +40,7 @@ export default function UploadPage() {
     status,
     fileName,
     fileSize,
+    lastModified,
     extractedText,
     pageCount,
     error,
@@ -68,18 +69,22 @@ export default function UploadPage() {
 
   const handleAnalyze = () => {
     if (extractedText) {
-      clearCachedAnalysis();
-      // Store in sessionStorage to pass to the dashboard
-      sessionStorage.setItem(
+      const fingerprint = { fileName, fileSize, lastModified };
+      const storedResume = {
+        text: extractedText,
+        fileName,
+        fileSize,
+        lastModified,
+        pageCount,
+        fingerprint,
+      };
+      // Persist the extracted resume so the cached report can be reused after future visits.
+      localStorage.setItem(
         'talentai_resume',
-        JSON.stringify({
-          text: extractedText,
-          fileName,
-          fileSize,
-          pageCount,
-        }),
+        JSON.stringify(storedResume),
       );
-      markResumeForAnalysis();
+      sessionStorage.setItem('talentai_resume', JSON.stringify(storedResume));
+      if (!getCachedAnalysis(fingerprint)) markResumeForAnalysis();
       router.push('/dashboard');
     }
   };

@@ -59,7 +59,20 @@ export interface JobApplication {
   atsScore: number;
   skills: string[];
   appliedAt: string;
-  status: 'Applied' | 'Shortlisted' | 'Rejected';
+  status: 'Pending' | 'Shortlisted' | 'Rejected';
+  analysis: TalentReport;
+}
+
+export interface CandidateRanking {
+  matchScore: number;
+  skillMatchPercentage: number;
+  matchingSkills: string[];
+  missingSkills: string[];
+  strengths: string[];
+  weaknesses: string[];
+  hireRecommendation: 'Hire' | 'Consider' | 'Reject';
+  interviewReadiness: number;
+  recruiterSummary: string;
 }
 
 /* ─── Job Match ─── */
@@ -80,3 +93,16 @@ export interface ResumeImprovement {
 
 /* ─── Upload State ─── */
 export type UploadStatus = 'idle' | 'uploading' | 'extracting' | 'analyzing' | 'complete' | 'error';
+
+/* ─── Interview Prep ─── */
+export interface InterviewQuestion {
+  question: string;
+  type: 'technical' | 'hr' | 'behavioral' | 'project' | 'coding' | 'followup';
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  expectedKeyPoints: string[];
+}
+
+export interface InterviewPrep {
+  questions: InterviewQuestion[];
+  readinessScore: number;
+}

@@ -11,6 +11,7 @@ interface UseResumeUploadReturn {
   status: UploadStatus;
   fileName: string | null;
   fileSize: number | null;
+  lastModified: number | null;
   extractedText: string | null;
   pageCount: number | null;
   error: string | null;
@@ -22,6 +23,7 @@ export function useResumeUpload(): UseResumeUploadReturn {
   const [status, setStatus] = useState<UploadStatus>('idle');
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<number | null>(null);
+  const [lastModified, setLastModified] = useState<number | null>(null);
   const [extractedText, setExtractedText] = useState<string | null>(null);
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +32,7 @@ export function useResumeUpload(): UseResumeUploadReturn {
     setStatus('idle');
     setFileName(null);
     setFileSize(null);
+    setLastModified(null);
     setExtractedText(null);
     setPageCount(null);
     setError(null);
@@ -40,6 +43,7 @@ export function useResumeUpload(): UseResumeUploadReturn {
       setError(null);
       setFileName(file.name);
       setFileSize(file.size);
+      setLastModified(file.lastModified);
       setStatus('uploading');
 
       // Simulate slight delay for UX
@@ -75,6 +79,7 @@ export function useResumeUpload(): UseResumeUploadReturn {
     status,
     fileName,
     fileSize,
+    lastModified,
     extractedText,
     pageCount,
     error,

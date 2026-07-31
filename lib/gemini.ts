@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import type { TalentReport } from '@/types';
+import type { CandidateRanking, Job, TalentReport } from '@/types';
 
 const REPORT_FIELDS = [
   'overallScore', 'atsScore', 'candidateLevel', 'technicalSkills', 'softSkills',
@@ -113,4 +113,36 @@ export async function generateTalentReport(resumeText: string): Promise<TalentRe
   }
 
   return parseReport(response.text);
+}
+
+export async function generateCandidateRanking(report: TalentReport, job: Job): Promise<CandidateRanking> {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error('Gemini is not configured. Set GEMINI_API_KEY and try again.');
+
+  const ai = new GoogleGenAI({ apiKey });
+  const response = await ai.models.generateContent({
+    model: 'gemini-3.6-flash',
+    contents: `You are an experienced recruiter. Compare the existing candidate analysis with the job below. Do not analyze a resume or invent evidence. Return ONLY valid JSON with exactly these fields:\n{\n  "matchScore": 0,\n  "skillMatchPercentage": 0,\n  "matchingSkills": [],\n  "missingSkills": [],\n  "strengths": [],\n  "weaknesses": [],\n  "hireRecommendation": "Consider",\n  "interviewReadiness": 0,\n  "recruiterSummary": ""\n}\nScores must be integers from 0 to 100. hireRecommendation must be Hire, Consider, or Reject. recruiterSummary must be 2-3 concise lines.\n\nJOB:\n${JSON.stringify(job)}\n\nEXISTING CANDIDATE ANALYSIS:\n${JSON.stringify(report)}`,
+    config: { responseMimeType: 'application/json' },
+  });
+  if (!response.text) throw new Error('Gemini returned an empty ranking response. Please try again.');
+
+  try {
+    const value = JSON.parse(response.text.trim().replace(/^```json\s*|^```\s*|\s*```$/g, '')) as Record<string, unknown>;
+    const recommendation = asString(value.hireRecommendation);
+    if (!value || typeof value !== 'object' || !['Hire', 'Consider', 'Reject'].includes(recommendation)) throw new Error();
+    return {
+      matchScore: asScore(value.matchScore),
+      skillMatchPercentage: asScore(value.skillMatchPercentage),
+      matchingSkills: asStringArray(value.matchingSkills),
+      missingSkills: asStringArray(value.missingSkills),
+      strengths: asStringArray(value.strengths),
+      weaknesses: asStringArray(value.weaknesses),
+      hireRecommendation: recommendation as CandidateRanking['hireRecommendation'],
+      interviewReadiness: asScore(value.interviewReadiness),
+      recruiterSummary: asString(value.recruiterSummary),
+    };
+  } catch {
+    throw new Error('Gemini returned an invalid ranking response. Please try again.');
+  }
 }
