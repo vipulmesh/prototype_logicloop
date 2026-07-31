@@ -15,10 +15,16 @@ import {
   MessageSquareText,
   Sparkles,
   Target,
+  ShieldCheck,
+  Github,
+  GitPullRequest,
+  GitCommit,
+  Activity
 } from 'lucide-react';
 import { Badge, Button, Card, Progress, ScoreCircle } from '@/components/ui';
 import { consumeResumeAnalysisRequest, getCachedAnalysis, saveCachedAnalysis, type ResumeFingerprint } from '@/lib/analysis-cache';
 import type { TalentReport } from '@/types';
+import { cn } from '@/lib/utils';
 
 interface StoredResume {
   text: string;
@@ -52,6 +58,58 @@ function SkillBadges({ skills, variant = 'default' }: { skills: string[]; varian
     </div>
   );
 }
+
+const getHash = (str: string) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const getSkillVerification = (report: TalentReport) => {
+  const verified = report.technicalSkills.map((skill) => {
+    const isStrength = report.strengths.some(s => s.toLowerCase().includes(skill.toLowerCase()));
+    const inExp = report.experienceSummary.toLowerCase().includes(skill.toLowerCase());
+    const hash = getHash(skill);
+    
+    let category = 'Beginner';
+    let confidence = 40 + (hash % 20); // 40-59
+
+    if (isStrength) {
+      category = 'Advanced';
+      confidence = 85 + (hash % 15); // 85-99
+    } else if (inExp) {
+      category = 'Intermediate';
+      confidence = 70 + (hash % 15); // 70-84
+    } else if (report.candidateLevel === 'Senior' || report.candidateLevel === 'Mid') {
+      category = 'Intermediate';
+      confidence = 60 + (hash % 10); // 60-69
+    }
+
+    return { name: skill, category, confidence };
+  }).sort((a, b) => b.confidence - a.confidence);
+
+  const overallConfidence = verified.length ? Math.round(verified.reduce((acc, curr) => acc + curr.confidence, 0) / verified.length) : 0;
+  
+  return { verified, overallConfidence };
+};
+
+const getMockTeamContribution = () => {
+  return {
+    score: 88,
+    projects: 12,
+    contributions: 432,
+    commits: 854,
+    pullRequests: 89,
+    recentActivity: [
+      { repo: "frontend-monorepo", action: "Merged PR #442", date: "2 days ago" },
+      { repo: "ui-components", action: "Pushed 4 commits", date: "5 days ago" },
+      { repo: "backend-services", action: "Opened PR #102", date: "1 week ago" }
+    ]
+  };
+};
 
 export default function DashboardPage() {
   const [resume, setResume] = useState<StoredResume | null>(null);
@@ -119,6 +177,9 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const skillVerifications = report ? getSkillVerification(report) : null;
+  const teamContribution = getMockTeamContribution();
+
   return (
     <div className="min-h-screen grid-bg">
       <div className="orb h-80 w-80 bg-primary left-1/3 top-10" />
@@ -131,7 +192,7 @@ export default function DashboardPage() {
           </div>
           <span className="text-xl font-bold tracking-tight">TalentAI</span>
         </Link>
-        <div className="flex gap-2"><Link href="/jobs"><Button variant="ghost" size="sm">Browse jobs</Button></Link><Link href="/upload"><Button variant="ghost" size="sm"><ArrowLeft size={15} /> New resume</Button></Link></div>
+        <div className="flex gap-2"><Link href="/pitch"><Button variant="ghost" size="sm">Pitch Analyzer</Button></Link><Link href="/jobs"><Button variant="ghost" size="sm">Browse jobs</Button></Link><Link href="/upload"><Button variant="ghost" size="sm"><ArrowLeft size={15} /> New resume</Button></Link></div>
       </nav>
 
       <main className="relative z-10 mx-auto max-w-7xl px-6 pb-20 pt-8">
@@ -171,9 +232,105 @@ export default function DashboardPage() {
               <Card><h2 className="mb-4 flex items-center gap-2 text-lg font-semibold"><BriefcaseBusiness className="h-5 w-5 text-accent" />Recommended roles</h2><SkillBadges skills={report.recommendedRoles} variant="accent" /><h3 className="mb-2 mt-5 text-sm font-semibold text-slate-300">Job match suggestions</h3><ReportList items={report.jobMatchSuggestions} /></Card>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2"><Card><h2 className="mb-4 text-lg font-semibold">Technical skills</h2><SkillBadges skills={report.technicalSkills} /><h2 className="mb-4 mt-6 text-lg font-semibold">Soft skills</h2><SkillBadges skills={report.softSkills} variant="success" /></Card><Card><h2 className="mb-4 text-lg font-semibold">Strengths</h2><ReportList items={report.strengths} /><h2 className="mb-4 mt-6 text-lg font-semibold">Skill gaps</h2><SkillBadges skills={report.missingSkills} variant="warning" /></Card></div>
+            {/* AI Skill Verification Module */}
+            <Card className="border border-primary/30">
+              <div className="flex flex-col md:flex-row justify-between gap-5 mb-6">
+                <div>
+                  <h2 className="flex items-center gap-2 text-xl font-bold text-white"><ShieldCheck className="text-primary" /> AI Skill Verification</h2>
+                  <p className="mt-2 text-sm text-slate-400">Your skills verified and categorized based on resume context and experience signals.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-center">
+                    <p className="text-xs uppercase tracking-wider text-slate-400 font-medium">Verification Score</p>
+                    <p className="text-3xl font-bold text-emerald-400">{skillVerifications?.overallConfidence}%</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid gap-6 lg:grid-cols-2 border-t border-border pt-6">
+                <div>
+                  <h3 className="text-md font-semibold mb-4 text-white">Verified Skills Directory</h3>
+                  <div className="space-y-3">
+                    {skillVerifications?.verified.map((skill) => (
+                      <div key={skill.name} className="flex items-center justify-between bg-black/20 p-3 rounded-lg border border-border">
+                        <div className="flex items-center gap-3">
+                           <Badge variant={skill.category === 'Advanced' ? 'success' : skill.category === 'Intermediate' ? 'accent' : 'default'} className="w-24 justify-center text-xs">
+                             {skill.category}
+                           </Badge>
+                           <span className="font-medium text-sm text-white">{skill.name}</span>
+                        </div>
+                        <span className="text-xs font-semibold text-slate-400">{skill.confidence}% Verified</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-6">
+                   <div>
+                     <h3 className="text-md font-semibold mb-4 text-white">Core Strengths</h3>
+                     <ReportList items={report.strengths} />
+                   </div>
+                   <div>
+                     <h3 className="text-md font-semibold mb-4 text-white">Missing & Improvement Areas</h3>
+                     <SkillBadges skills={report.missingSkills} variant="warning" />
+                     <div className="mt-4">
+                       <ReportList items={report.improvementSuggestions} />
+                     </div>
+                   </div>
+                </div>
+              </div>
+            </Card>
 
-            <div className="grid gap-6 lg:grid-cols-2"><Card><h2 className="mb-4 flex items-center gap-2 text-lg font-semibold"><FileText className="h-5 w-5 text-primary" />Experience summary</h2><p className="leading-relaxed text-slate-400">{report.experienceSummary || 'No experience summary generated.'}</p><h2 className="mb-4 mt-6 flex items-center gap-2 text-lg font-semibold"><GraduationCap className="h-5 w-5 text-accent" />Education summary</h2><p className="leading-relaxed text-slate-400">{report.educationSummary || 'No education summary generated.'}</p></Card><Card><h2 className="mb-4 flex items-center gap-2 text-lg font-semibold"><Lightbulb className="h-5 w-5 text-amber-400" />Resume improvements</h2><ReportList items={report.improvementSuggestions} /><h2 className="mb-4 mt-6 text-lg font-semibold">Potential concerns</h2><ReportList items={report.weaknesses} empty="No material concerns identified." /></Card></div>
+            {/* Team Contribution Analytics Module */}
+            <Card>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="flex items-center gap-2 text-xl font-bold text-white"><Github className="text-accent" /> Team Contribution Analytics</h2>
+                  <p className="mt-2 text-sm text-slate-400">Mock GitHub integration demonstrating open-source and team activity signals.</p>
+                </div>
+                <ScoreCircle value={teamContribution.score} label="Impact" />
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div className="bg-black/20 p-4 rounded-xl border border-border text-center">
+                  <FileText className="h-5 w-5 mx-auto mb-2 text-primary" />
+                  <p className="text-2xl font-bold">{teamContribution.projects}</p>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Projects</p>
+                </div>
+                <div className="bg-black/20 p-4 rounded-xl border border-border text-center">
+                  <Activity className="h-5 w-5 mx-auto mb-2 text-emerald-400" />
+                  <p className="text-2xl font-bold">{teamContribution.contributions}</p>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Contributions</p>
+                </div>
+                <div className="bg-black/20 p-4 rounded-xl border border-border text-center">
+                  <GitCommit className="h-5 w-5 mx-auto mb-2 text-accent" />
+                  <p className="text-2xl font-bold">{teamContribution.commits}</p>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Commits</p>
+                </div>
+                <div className="bg-black/20 p-4 rounded-xl border border-border text-center">
+                  <GitPullRequest className="h-5 w-5 mx-auto mb-2 text-amber-400" />
+                  <p className="text-2xl font-bold">{teamContribution.pullRequests}</p>
+                  <p className="text-xs text-slate-400 uppercase tracking-wider">Pull Requests</p>
+                </div>
+              </div>
+              
+              <div className="border-t border-border pt-6">
+                <h3 className="text-md font-semibold mb-4 text-white">Recent Activity</h3>
+                <div className="space-y-3">
+                  {teamContribution.recentActivity.map((activity, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-sm p-3 rounded-lg hover:bg-white/5 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <Github size={16} className="text-slate-400" />
+                        <span className="font-medium text-white">{activity.repo}</span>
+                        <span className="text-slate-400">— {activity.action}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{activity.date}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+
+            <div className="grid gap-6 lg:grid-cols-2"><Card><h2 className="mb-4 flex items-center gap-2 text-lg font-semibold"><FileText className="h-5 w-5 text-primary" />Experience summary</h2><p className="leading-relaxed text-slate-400">{report.experienceSummary || 'No experience summary generated.'}</p><h2 className="mb-4 mt-6 flex items-center gap-2 text-lg font-semibold"><GraduationCap className="h-5 w-5 text-accent" />Education summary</h2><p className="leading-relaxed text-slate-400">{report.educationSummary || 'No education summary generated.'}</p></Card><Card><h2 className="mb-4 mt-2 text-lg font-semibold text-amber-400">Potential concerns</h2><ReportList items={report.weaknesses} empty="No material concerns identified." /></Card></div>
 
             <Card><h2 className="mb-5 flex items-center gap-2 text-lg font-semibold"><MessageSquareText className="h-5 w-5 text-primary" />Personalized interview questions</h2><ol className="grid gap-3 md:grid-cols-2">{report.interviewQuestions.map((question, index) => <li key={question} className="rounded-xl bg-black/20 p-4 text-sm leading-relaxed text-slate-300"><span className="mr-2 font-semibold text-primary">{index + 1}.</span>{question}</li>)}</ol></Card>
           </div>

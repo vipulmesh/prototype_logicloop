@@ -110,6 +110,7 @@ export default function JobsPage() {
           <span className="text-xl font-bold">TalentAI</span>
         </Link>
         <div className="flex gap-3">
+          <Link href="/pitch"><Button variant="ghost" size="sm">Pitch Analyzer</Button></Link>
           {report && <Link href="/dashboard"><Button variant="ghost" size="sm">My Talent Report</Button></Link>}
           <Link href="/upload"><Button variant="ghost" size="sm"><ArrowLeft size={15} /> Upload resume</Button></Link>
         </div>

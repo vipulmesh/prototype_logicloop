@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import type { CandidateRanking, Job, TalentReport } from '@/types';
+import type { CandidateRanking, Job, TalentReport, InterviewPrep, InterviewQuestion } from '@/types';
 
 const REPORT_FIELDS = [
   'overallScore', 'atsScore', 'candidateLevel', 'technicalSkills', 'softSkills',
@@ -146,3 +146,62 @@ export async function generateCandidateRanking(report: TalentReport, job: Job): 
     throw new Error('Gemini returned an invalid ranking response. Please try again.');
   }
 }
+
+export async function generateInterviewPrep(report: TalentReport, job?: Job): Promise<InterviewPrep> {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error('Gemini is not configured. Set GEMINI_API_KEY and try again.');
+
+  const ai = new GoogleGenAI({ apiKey });
+  const prompt = `You are an expert technical interviewer and HR manager.
+Create a comprehensive interview preparation guide for this candidate based on their resume analysis${job ? ' and the following job description' : ''}.
+Return ONLY a valid JSON object: no markdown, no code fences, and no commentary.
+
+Format:
+{
+  "readinessScore": 85,
+  "questions": [
+    {
+      "question": "Question text",
+      "type": "technical", // Must be one of: technical, hr, behavioral, project, coding, followup
+      "difficulty": "Medium", // Must be one of: Easy, Medium, Hard
+      "expectedKeyPoints": ["Point 1", "Point 2"]
+    }
+  ]
+}
+
+Ensure you generate exactly:
+- 10 technical questions
+- 5 hr questions
+- 5 behavioral questions
+- 3 project-based questions
+- 2 coding questions
+- 3 follow-up questions
+Total 28 questions. Provide detailed expected key points.`;
+
+  const contents = `${prompt}\n\nCANDIDATE ANALYSIS:\n${JSON.stringify(report)}${job ? `\n\nJOB:\n${JSON.stringify(job)}` : ''}`;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3.6-flash',
+    contents,
+    config: { responseMimeType: 'application/json' },
+  });
+  if (!response.text) throw new Error('Gemini returned an empty interview prep response. Please try again.');
+
+  try {
+    const value = JSON.parse(response.text.trim().replace(/^```json\s*|^```\s*|\s*```$/g, '')) as Record<string, unknown>;
+    if (!value || typeof value !== 'object' || !Array.isArray(value.questions)) throw new Error();
+    
+    return {
+      readinessScore: typeof value.readinessScore === 'number' ? value.readinessScore : 0,
+      questions: (value.questions as any[]).map(q => ({
+        question: typeof q.question === 'string' ? q.question : '',
+        type: ['technical', 'hr', 'behavioral', 'project', 'coding', 'followup'].includes(q.type) ? q.type : 'technical',
+        difficulty: ['Easy', 'Medium', 'Hard'].includes(q.difficulty) ? q.difficulty : 'Medium',
+        expectedKeyPoints: Array.isArray(q.expectedKeyPoints) ? q.expectedKeyPoints.map((s: any) => String(s)) : []
+      }))
+    };
+  } catch {
+    throw new Error('Gemini returned an invalid interview prep response. Please try again.');
+  }
+}
+
