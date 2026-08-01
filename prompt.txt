@@ -1,0 +1,56 @@
+Analyze the current project first.
+
+The database is already integrated.
+
+Do NOT rebuild authentication.
+
+Goal:
+Implement separate database-backed authentication for Candidates and Recruiters.
+
+Requirements:
+
+1. Candidate Authentication
+- Register
+- Login
+- Logout
+- Store users in the database
+- Role = CANDIDATE
+- Passwords must be hashed using bcrypt
+- Validate email uniqueness
+
+2. Recruiter Authentication
+- Register
+- Login
+- Logout
+- Store users in the database
+- Role = RECRUITER
+- Passwords must be hashed using bcrypt
+- Validate email uniqueness
+
+3. Routing
+- /candidate/login
+- /candidate/register
+- /recruiter/login
+- /recruiter/register
+
+4. After Login
+- Candidate → Candidate Dashboard
+- Recruiter → Recruiter Dashboard
+
+5. Route Protection
+Prevent unauthenticated access to protected pages.
+
+6. Session
+Reuse the existing authentication/session system if present.
+Do not introduce a new auth architecture.
+
+Rules:
+- Reuse existing UI components.
+- Do not redesign pages.
+- Modify minimum files.
+- Keep TypeScript error-free.
+
+After completion:
+- List modified files.
+- Explain the authentication flow.
+- Stop.
