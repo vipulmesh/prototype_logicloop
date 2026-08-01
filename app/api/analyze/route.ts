@@ -49,6 +49,10 @@ export async function POST(request: NextRequest) {
 
     const githubInsights = parseGitHubInsights(resume.user?.githubInsights ?? null);
     const report = await generateTalentReport(resume.extractedText, githubInsights);
+    if (githubInsights && report.developerProfile) {
+      report.developerProfile.publicRepositoryCount = githubInsights.repositoryCount;
+      report.developerProfile.topProgrammingLanguages = githubInsights.primaryLanguages;
+    }
     const verifiedSkills = getVerifiedSkillProfile(report);
     report.overallScore = enrichTalentScore(report.overallScore, githubInsights, report.projects?.length ?? 0, verifiedSkills.overallConfidence);
     const analysis = await prisma.resumeAnalysis.create({

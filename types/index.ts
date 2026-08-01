@@ -30,6 +30,15 @@ export interface CandidateProject {
   recruiterSummary: string;
 }
 
+export interface DeveloperProfile {
+  githubProfileStrength: number;
+  publicRepositoryCount: number;
+  topProgrammingLanguages: string[];
+  openSourceActivity: string;
+  estimatedCodingMaturity: string;
+  projectQualityScore: number;
+}
+
 export interface TalentReport {
   overallScore: number;
   atsScore: number;
@@ -47,6 +56,7 @@ export interface TalentReport {
   recruiterSummary: string;
   interviewReadiness: number;
   interviewQuestions: string[];
+  developerProfile?: DeveloperProfile;
   projects?: CandidateProject[];
 }
 

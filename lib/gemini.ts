@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import type { CandidateRanking, Job, TalentReport, InterviewPrep, InterviewQuestion } from '@/types';
+import type { CandidateRanking, Job, TalentReport, InterviewPrep, InterviewQuestion, DeveloperProfile } from '@/types';
 import type { GitHubProfileInsights } from '@/lib/github';
 
 const REPORT_FIELDS = [
@@ -30,6 +30,14 @@ Use exactly these fields:
   "recruiterSummary": "",
   "interviewReadiness": 0,
   "interviewQuestions": [],
+  "developerProfile": {
+    "githubProfileStrength": 0,
+    "publicRepositoryCount": 0,
+    "topProgrammingLanguages": [],
+    "openSourceActivity": "",
+    "estimatedCodingMaturity": "",
+    "projectQualityScore": 0
+  },
   "projects": [
     {
       "id": "proj_1",
@@ -51,7 +59,7 @@ Use exactly these fields:
 }
 
 Scores must be integers from 0 to 100. candidateLevel must be one of Fresher, Junior, Mid, Senior.
-Extract candidate projects if present in the resume. Provide exactly 10 personalized interviewQuestions.`;
+If PUBLIC GITHUB PROFILE INSIGHTS are supplied, produce developerProfile from that public data and the extracted projects. Otherwise set developerProfile to null. estimatedCodingMaturity must be a concise level such as Emerging, Developing, Proficient, Advanced, or Expert. Extract candidate projects if present in the resume. Provide exactly 10 personalized interviewQuestions.`;
 
 function asString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
@@ -64,6 +72,11 @@ function asStringArray(value: unknown): string[] {
 function asScore(value: unknown): number {
   const score = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(score) ? Math.round(Math.min(100, Math.max(0, score))) : 0;
+}
+
+function asCount(value: unknown): number {
+  const count = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(count) ? Math.max(0, Math.round(count)) : 0;
 }
 
 function parseReport(text: string): TalentReport {
@@ -111,6 +124,17 @@ function parseReport(text: string): TalentReport {
     industryRelevance: asScore(p.industryRelevance) || 85,
     recruiterSummary: asString(p.recruiterSummary) || 'Extracted candidate project details.',
   }));
+  const rawDeveloperProfile = report.developerProfile;
+  const developerProfile: DeveloperProfile | undefined = rawDeveloperProfile && typeof rawDeveloperProfile === 'object' && !Array.isArray(rawDeveloperProfile)
+    ? {
+        githubProfileStrength: asScore((rawDeveloperProfile as Record<string, unknown>).githubProfileStrength),
+        publicRepositoryCount: asCount((rawDeveloperProfile as Record<string, unknown>).publicRepositoryCount),
+        topProgrammingLanguages: asStringArray((rawDeveloperProfile as Record<string, unknown>).topProgrammingLanguages),
+        openSourceActivity: asString((rawDeveloperProfile as Record<string, unknown>).openSourceActivity),
+        estimatedCodingMaturity: asString((rawDeveloperProfile as Record<string, unknown>).estimatedCodingMaturity),
+        projectQualityScore: asScore((rawDeveloperProfile as Record<string, unknown>).projectQualityScore),
+      }
+    : undefined;
 
   return {
     overallScore: asScore(report.overallScore),
@@ -129,6 +153,7 @@ function parseReport(text: string): TalentReport {
     recruiterSummary: asString(report.recruiterSummary),
     interviewReadiness: asScore(report.interviewReadiness),
     interviewQuestions,
+    developerProfile,
     projects: projects.length ? projects : undefined,
   };
 }
