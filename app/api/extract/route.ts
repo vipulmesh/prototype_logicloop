@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getSessionFromRequest } from '@/lib/auth';
+import { extractCandidateProfileLinks, fetchGitHubProfileInsights } from '@/lib/github';
 
 export async function POST(req: NextRequest) {
   try {
+    const session = getSessionFromRequest(req);
+    if (!session || session.role !== 'CANDIDATE') {
+      return NextResponse.json({ error: 'Candidate authentication is required.' }, { status: 401 });
+    }
+
     const formData = await req.formData();
     const file = formData.get('resume') as File | null;
 
@@ -60,6 +67,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const profileLinks = extractCandidateProfileLinks(text);
+    const githubInsights = profileLinks.githubUrl ? await fetchGitHubProfileInsights(profileLinks.githubUrl) : null;
+    await prisma.user.update({
+      where: { id: session.id },
+      data: {
+        githubUrl: profileLinks.githubUrl,
+        linkedinUrl: profileLinks.linkedinUrl,
+        portfolioUrl: profileLinks.portfolioUrl,
+        githubInsights: githubInsights ? JSON.stringify(githubInsights) : null,
+      },
+    });
+
     const resume = await prisma.resume.create({
       data: {
         fileName: file.name,
@@ -68,6 +87,7 @@ export async function POST(req: NextRequest) {
         fileData: buffer,
         extractedText: text,
         pageCount: pages,
+        userId: session.id,
       },
       select: { id: true },
     });

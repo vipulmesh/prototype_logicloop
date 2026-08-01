@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateTalentReport } from '@/lib/gemini';
 import { getVerifiedSkillProfile } from '@/lib/skill-verification';
 import { prisma } from '@/lib/prisma';
+import type { GitHubProfileInsights } from '@/lib/github';
+
+function parseGitHubInsights(value: string | null): GitHubProfileInsights | null {
+  try { return value ? JSON.parse(value) as GitHubProfileInsights : null; } catch { return null; }
+}
+
+function enrichTalentScore(baseScore: number, github: GitHubProfileInsights | null, projectCount: number, verifiedSkillConfidence: number) {
+  const githubSignal = github
+    ? Math.min(8, Math.floor(github.repositoryCount / 8) + Math.min(2, github.primaryLanguages.length) + (github.totalContributions ? 2 : 0))
+    : 0;
+  const projectSignal = Math.min(3, projectCount);
+  const skillSignal = verifiedSkillConfidence >= 80 ? 3 : verifiedSkillConfidence >= 60 ? 1 : 0;
+  return Math.min(100, baseScore + githubSignal + projectSignal + skillSignal);
+}
 
 export const runtime = 'nodejs';
 
@@ -19,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     const resume = await prisma.resume.findUnique({
       where: { id: resumeId },
-      include: { analysis: true },
+      include: { analysis: true, user: { select: { githubInsights: true } } },
     });
 
     if (!resume) {
@@ -33,8 +47,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const report = await generateTalentReport(resume.extractedText);
+    const githubInsights = parseGitHubInsights(resume.user?.githubInsights ?? null);
+    const report = await generateTalentReport(resume.extractedText, githubInsights);
     const verifiedSkills = getVerifiedSkillProfile(report);
+    report.overallScore = enrichTalentScore(report.overallScore, githubInsights, report.projects?.length ?? 0, verifiedSkills.overallConfidence);
     const analysis = await prisma.resumeAnalysis.create({
       data: {
         resumeId: resume.id,

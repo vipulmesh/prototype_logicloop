@@ -25,7 +25,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         extractedProjects: analysis ? parseJson<unknown[]>(analysis.extractedProjects, []) : [],
       };
     });
-    return NextResponse.json({ candidate: { id: user.id, name: user.name, email: user.email, profilePhoto: user.profilePhoto, registeredAt: user.createdAt.toISOString(), resumes } });
+    return NextResponse.json({ candidate: { id: user.id, name: user.name, email: user.email, profilePhoto: user.profilePhoto, githubUrl: user.githubUrl, linkedinUrl: user.linkedinUrl, portfolioUrl: user.portfolioUrl, githubInsights: user.githubInsights ? parseJson<unknown>(user.githubInsights, null) : null, registeredAt: user.createdAt.toISOString(), resumes } });
   } catch (error) {
     console.error('Candidate profile error:', error);
     return NextResponse.json({ error: 'Unable to load this candidate.' }, { status: 500 });

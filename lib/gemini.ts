@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import type { CandidateRanking, Job, TalentReport, InterviewPrep, InterviewQuestion } from '@/types';
+import type { GitHubProfileInsights } from '@/lib/github';
 
 const REPORT_FIELDS = [
   'overallScore', 'atsScore', 'candidateLevel', 'technicalSkills', 'softSkills',
@@ -132,7 +133,7 @@ function parseReport(text: string): TalentReport {
   };
 }
 
-export async function generateTalentReport(resumeText: string): Promise<TalentReport> {
+export async function generateTalentReport(resumeText: string, githubInsights?: GitHubProfileInsights | null): Promise<TalentReport> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) {
     throw new Error('Gemini is not configured. Set GEMINI_API_KEY and try again.');
@@ -141,7 +142,7 @@ export async function generateTalentReport(resumeText: string): Promise<TalentRe
   const ai = new GoogleGenAI({ apiKey });
   const response = await ai.models.generateContent({
     model: 'gemini-3.6-flash',
-    contents: `${prompt}\n\nRESUME:\n${resumeText.slice(0, 30000)}`,
+    contents: `${prompt}\n\nRESUME:\n${resumeText.slice(0, 30000)}${githubInsights ? `\n\nPUBLIC GITHUB PROFILE INSIGHTS:\n${JSON.stringify(githubInsights)}\nUse these public signals to refine the talent score, technical skills, project assessment, and recruiter summary. Do not claim evidence that is not present.` : ''}`,
     config: { responseMimeType: 'application/json' },
   });
 
@@ -241,4 +242,3 @@ Total 28 questions. Provide detailed expected key points.`;
     throw new Error('Gemini returned an invalid interview prep response. Please try again.');
   }
 }
-

@@ -79,7 +79,7 @@ export interface JobApplication {
   atsScore: number;
   skills: string[];
   appliedAt: string;
-  status: 'Pending' | 'Shortlisted' | 'Rejected';
+  status: 'Pending' | 'Shortlisted' | 'Interview' | 'Accepted' | 'Rejected';
   analysis: TalentReport;
 }
 

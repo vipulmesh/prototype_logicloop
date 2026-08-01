@@ -6,7 +6,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params;
   const resume = await prisma.resume.findUnique({
     where: { id },
-    include: { analysis: true },
+    include: { analysis: true, user: { select: { githubUrl: true, linkedinUrl: true, portfolioUrl: true, githubInsights: true } } },
   });
 
   if (!resume) {
@@ -21,6 +21,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       pageCount: resume.pageCount,
       text: resume.extractedText,
       fileData: `data:${resume.mimeType};base64,${Buffer.from(resume.fileData).toString('base64')}`,
+      profile: resume.user ? {
+        githubUrl: resume.user.githubUrl,
+        linkedinUrl: resume.user.linkedinUrl,
+        portfolioUrl: resume.user.portfolioUrl,
+        githubInsights: resume.user.githubInsights ? JSON.parse(resume.user.githubInsights) : null,
+      } : null,
     },
     analysis: resume.analysis
       ? {

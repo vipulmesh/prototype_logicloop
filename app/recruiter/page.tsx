@@ -331,7 +331,7 @@ function LegacyCandidateDirectory({ applications, rankings, onViewProfile }: { a
 }
 
 function CandidateFullProfile({ candidateId, onClose }: { candidateId: string; onClose: () => void }) {
-  const [candidate, setCandidate] = useState<(DiscoveryCandidate & { resumes: Array<{ id: string; fileName: string; createdAt: string; status: string; talentScore: number | null; atsScore: number | null; report: Record<string, unknown>; verifiedSkills: { candidateLevel?: string; topStrongestSkills?: DiscoverySkill[] }; extractedProjects: CandidateProject[] }> }) | null>(null);
+  const [candidate, setCandidate] = useState<(DiscoveryCandidate & { githubUrl: string | null; linkedinUrl: string | null; portfolioUrl: string | null; githubInsights: { repositoryCount: number; followers: number; primaryLanguages: string[] } | null; resumes: Array<{ id: string; fileName: string; createdAt: string; status: string; talentScore: number | null; atsScore: number | null; report: Record<string, unknown>; verifiedSkills: { candidateLevel?: string; topStrongestSkills?: DiscoverySkill[] }; extractedProjects: CandidateProject[] }> }) | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -347,7 +347,9 @@ function CandidateFullProfile({ candidateId, onClose }: { candidateId: string; o
 
   if (error) return <Card className="text-center p-8"><ShieldAlert className="mx-auto h-8 w-8 text-amber-400 mb-3" /><p className="text-slate-300">{error}</p><Button variant="ghost" size="sm" className="mt-4" onClick={onClose}><ArrowLeft size={14} /> Back</Button></Card>;
   if (!candidate) return <Card className="flex items-center justify-center gap-3 p-10 text-slate-400"><Loader2 className="h-5 w-5 animate-spin text-primary" />Loading candidate profile…</Card>;
-  const resume = candidate.resumes[0];
+  const selectedResume = candidate.resumes[0];
+  const profileLinks = [candidate.githubUrl, candidate.linkedinUrl, candidate.portfolioUrl].filter((url): url is string => Boolean(url));
+  const resume = selectedResume && profileLinks.length ? { ...selectedResume, fileName: `${selectedResume.fileName} · ${profileLinks.join(' · ')}` } : selectedResume;
   const skills = resume?.verifiedSkills?.topStrongestSkills || [];
   const projects = resume?.extractedProjects || [];
   const report = resume?.report || {};
@@ -902,7 +904,7 @@ function RecruiterPortal() {
 
   const navigation: { id: PortalView; label: string; href: string; icon: typeof BarChart3 }[] = [
     { id: 'dashboard', label: 'Analytics', href: '/recruiter/dashboard', icon: BarChart3 },
-    { id: 'directory', label: 'Candidate Discovery', href: '/recruiter/directory', icon: Users },
+    { id: 'directory', label: 'Candidate Discovery', href: '/recruiter?view=directory', icon: Users },
     { id: 'jobs', label: 'My jobs', href: '/recruiter/jobs', icon: BriefcaseBusiness },
     { id: 'applicants', label: 'Applicants', href: '/recruiter/applicants', icon: CheckCircle2 },
     { id: 'hackathons', label: 'Hackathons', href: '/recruiter/hackathons', icon: Trophy },

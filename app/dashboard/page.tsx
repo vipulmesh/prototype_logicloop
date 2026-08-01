@@ -39,6 +39,12 @@ interface StoredResume {
   fileSize: number | null;
   lastModified: number | null;
   fileData?: string | null;
+  profile?: {
+    githubUrl: string | null;
+    linkedinUrl: string | null;
+    portfolioUrl: string | null;
+    githubInsights: { repositoryCount: number; followers: number; primaryLanguages: string[] } | null;
+  } | null;
 }
 
 function ReportList({ items, empty = 'No signals found.' }: { items: string[]; empty?: string }) {
@@ -206,6 +212,7 @@ export default function DashboardPage() {
           <p>{resume?.fileName || 'Resume'} · Gemini-powered recruiter and ATS analysis</p>
           <span className="text-xs text-muted-foreground">Analysis status: {isLoading ? 'Analyzing' : report ? 'Complete' : 'Unavailable'}</span>
           {lastAnalyzed && <span className="text-xs text-muted-foreground">Last analyzed {new Date(lastAnalyzed).toLocaleString()}</span>}
+          {resume?.profile && (resume.profile.githubUrl || resume.profile.linkedinUrl || resume.profile.portfolioUrl) && <div className="flex flex-wrap items-center gap-2 text-xs"><span className="text-slate-500">Profile links:</span>{resume.profile.githubUrl && <a href={resume.profile.githubUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">GitHub</a>}{resume.profile.linkedinUrl && <a href={resume.profile.linkedinUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">LinkedIn</a>}{resume.profile.portfolioUrl && <a href={resume.profile.portfolioUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">Portfolio</a>}{resume.profile.githubInsights && <span className="text-slate-400">{resume.profile.githubInsights.repositoryCount} repos · {resume.profile.githubInsights.followers} followers · {resume.profile.githubInsights.primaryLanguages.join(', ') || 'No languages listed'}</span>}</div>}
           {report && (
             <>
               {resume?.fileData && (

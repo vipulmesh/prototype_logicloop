@@ -25,6 +25,10 @@ model User {
   email        String   @unique
   passwordHash String
   profilePhoto String?
+  githubUrl    String?
+  linkedinUrl  String?
+  portfolioUrl String?
+  githubInsights String?
   role         String   @default("RECRUITER")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

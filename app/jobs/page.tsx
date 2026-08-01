@@ -115,7 +115,7 @@ export default function JobsPage() {
         <div className="flex justify-between items-end flex-wrap gap-4">
           <div>
             <Badge variant="accent">Candidate opportunities</Badge>
-            <h1 className="mt-4 text-3xl font-bold md:text-4xl">Find your next role</h1>
+            <h1 className="mt-4 text-3xl font-bold md:text-4xl">My Jobs</h1>
             <p className="mt-2 text-slate-400">Explore open roles and apply with your analyzed resume.</p>
           </div>
           {report && <Badge variant="success"><Sparkles size={14} className="mr-1.5" /> AI Matching Active</Badge>}
@@ -198,7 +198,7 @@ export default function JobsPage() {
 
                 <div className="mt-auto pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <span className="text-sm font-medium text-slate-300">
-                    {application ? <span className="text-accent flex items-center gap-1.5"><CheckCircle2 size={15}/> Status: {application.status}</span> : job.salary}
+                    {application ? <span className="text-accent flex items-center gap-1.5"><CheckCircle2 size={15}/> Status: {application.status === 'Pending' ? 'Applied' : application.status}</span> : 'Not Applied'}
                   </span>
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     {!application && <Button variant="ghost" size="sm" className="flex-1 sm:flex-none">Save Job</Button>}
