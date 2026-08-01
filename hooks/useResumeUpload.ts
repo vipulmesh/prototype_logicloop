@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { UploadStatus } from '@/types';
 
 interface UploadResult {
+  resumeId: string;
   text: string;
   pages: number;
   characters: number;
@@ -16,6 +17,7 @@ interface UseResumeUploadReturn {
   pageCount: number | null;
   fileData: string | null;
   error: string | null;
+  resumeId: string | null;
   upload: (file: File) => Promise<void>;
   reset: () => void;
 }
@@ -29,6 +31,7 @@ export function useResumeUpload(): UseResumeUploadReturn {
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [fileData, setFileData] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resumeId, setResumeId] = useState<string | null>(null);
 
   const reset = useCallback(() => {
     setStatus('idle');
@@ -39,6 +42,7 @@ export function useResumeUpload(): UseResumeUploadReturn {
     setPageCount(null);
     setFileData(null);
     setError(null);
+    setResumeId(null);
   }, []);
 
   const upload = useCallback(async (file: File) => {
@@ -77,6 +81,7 @@ export function useResumeUpload(): UseResumeUploadReturn {
       }
 
       const result = data as UploadResult;
+      setResumeId(result.resumeId);
       setExtractedText(result.text);
       setPageCount(result.pages);
       setStatus('complete');
@@ -95,6 +100,7 @@ export function useResumeUpload(): UseResumeUploadReturn {
     pageCount,
     fileData,
     error,
+    resumeId,
     upload,
     reset,
   };

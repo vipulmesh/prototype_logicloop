@@ -5,15 +5,9 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, BrainCircuit, CheckCircle2, MapPin, Loader2, PlayCircle, Eye, AlertCircle, RefreshCw } from 'lucide-react';
 import { Badge, Button, Card, Progress } from '@/components/ui';
-import { getApplications, getAvailableJobs, saveApplications } from '@/lib/demo-jobs';
-import { getCachedAnalysis } from '@/lib/analysis-cache';
+import { createApplication, getApplications, getAvailableJobs } from '@/lib/demo-jobs';
 import { getCachedInterviewPrep, saveCachedInterviewPrep } from '@/lib/interview-cache';
 import type { Job, JobApplication, InterviewPrep } from '@/types';
-
-interface StoredResume {
-  fileName: string | null;
-  fingerprint: { fileName: string | null; fileSize: number | null; lastModified: number | null };
-}
 
 export default function JobDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -28,29 +22,37 @@ export default function JobDetailsPage() {
   const [showPractice, setShowPractice] = useState(false);
   const [revealedHints, setRevealedHints] = useState<Record<number, boolean>>({});
 
-  useEffect(() => { 
-    const found = getAvailableJobs().find((item) => item.id === params.id) || null; 
-    setJob(found); 
-    setApplicationStatus(getApplications().find((application) => application.jobId === params.id)?.status ?? null); 
+  const getResumeContext = async () => {
+    const resumeId = localStorage.getItem('talentai_resume_id') || sessionStorage.getItem('talentai_resume_id');
+    if (!resumeId) return null;
+    const response = await fetch(`/api/resumes/${resumeId}`);
+    if (!response.ok) return null;
+    const data = await response.json() as { resume?: { fileName: string }; analysis?: { report: import('@/types').TalentReport } | null };
+    return data.resume && data.analysis ? { fileName: data.resume.fileName, report: data.analysis.report } : null;
+  };
+
+  useEffect(() => {
+    void Promise.all([getAvailableJobs(), getApplications()]).then(([jobs, applications]) => {
+      setJob(jobs.find((item) => item.id === params.id) || null);
+      setApplicationStatus(applications.find((application) => application.jobId === params.id)?.status ?? null);
+    });
   }, [params.id]);
 
-  const apply = () => {
+  const apply = async () => {
     if (!job) return;
-    const resume = (() => { try { return JSON.parse(localStorage.getItem('talentai_resume') || sessionStorage.getItem('talentai_resume') || 'null') as StoredResume | null; } catch { return null; } })();
-    const report = resume?.fingerprint ? getCachedAnalysis(resume.fingerprint)?.report : null;
-    if (!resume?.fileName || !report) { setError('Analyze a resume first, then return to apply with one click.'); return; }
-    if (getApplications().some((application) => application.jobId === job.id)) { setApplicationStatus(getApplications().find((application) => application.jobId === job.id)?.status ?? 'Pending'); return; }
-    const application: JobApplication = { id: crypto.randomUUID(), jobId: job.id, jobTitle: job.title, candidateName: resume.fileName.replace(/\.[^.]+$/, ''), resumeName: resume.fileName, talentScore: report.overallScore, atsScore: report.atsScore, skills: report.technicalSkills, appliedAt: new Date().toISOString(), status: 'Pending', analysis: report };
-    saveApplications([application, ...getApplications()]); setApplicationStatus(application.status); setError(null);
+    const resume = await getResumeContext();
+    if (!resume) { setError('Analyze a resume first, then return to apply with one click.'); return; }
+    const application = await createApplication({ jobId: job.id, jobTitle: job.title, candidateName: resume.fileName.replace(/\.[^.]+$/, ''), resumeName: resume.fileName, talentScore: resume.report.overallScore, atsScore: resume.report.atsScore, skills: resume.report.technicalSkills, analysis: resume.report });
+    setApplicationStatus(application.status); setError(null);
   };
 
   const startPractice = async (forceRegenerate = false) => {
     if (!job) return;
-    const resume = (() => { try { return JSON.parse(localStorage.getItem('talentai_resume') || sessionStorage.getItem('talentai_resume') || 'null') as StoredResume | null; } catch { return null; } })();
-    const report = resume?.fingerprint ? getCachedAnalysis(resume.fingerprint)?.report : null;
+    const resume = await getResumeContext();
+    const report = resume?.report;
     if (!report) { setPrepError('Resume analysis not found.'); return; }
 
-    const applicationId = getApplications().find((application) => application.jobId === job.id)?.id || null;
+    const applicationId = (await getApplications()).find((application) => application.jobId === job.id)?.id || null;
 
     if (!forceRegenerate) {
       const cached = getCachedInterviewPrep(applicationId, report, job);

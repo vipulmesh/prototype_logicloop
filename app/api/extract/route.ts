@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(req: NextRequest) {
   try {
@@ -59,7 +60,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const resume = await prisma.resume.create({
+      data: {
+        fileName: file.name,
+        mimeType: file.type,
+        fileSize: file.size,
+        fileData: buffer,
+        extractedText: text,
+        pageCount: pages,
+      },
+      select: { id: true },
+    });
+
     return NextResponse.json({
+      resumeId: resume.id,
       text,
       pages,
       characters: text.length,

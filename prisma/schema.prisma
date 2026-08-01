@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Keeps the initial migration non-empty without migrating application data.
+model PrismaSetup {
+  id Int @id
+
+  @@map("prisma_setup")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Resume {
+  id            String          @id @default(cuid())
+  fileName      String
+  mimeType      String
+  fileSize      Int
+  fileData      Bytes
+  extractedText String
+  pageCount     Int
+  createdAt     DateTime        @default(now())
+  analysis      ResumeAnalysis?
+}
+
+model ResumeAnalysis {
+  id                String   @id @default(cuid())
+  resumeId          String   @unique
+  report            String
+  talentScore       Int
+  atsScore          Int
+  extractedProjects String
+  verifiedSkills    String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  resume            Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+}
+
+model Job {
+  id           String        @id @default(cuid())
+  title        String
+  company      String
+  location     String
+  type         String
+  salary       String
+  skills       String
+  description  String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  applications Application[]
+}
+
+model Application {
+  id            String   @id @default(cuid())
+  jobId         String
+  candidateName String
+  resumeName    String
+  talentScore   Int
+  atsScore      Int
+  skills        String
+  analysis      String
+  appliedAt     DateTime @default(now())
+  status        String   @default("Pending")
+  job           Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model Hackathon {
+  id         String   @id @default(cuid())
+  name       String
+  team       String
+  project    String
+  innovation Int
+  technical  Int
+  business   Int
+  overall    Int
+  members    String
+  createdAt  DateTime @default(now())
+}
+
+model ContributionAnalytics {
+  id             String   @id @default(cuid())
+  score          Int
+  projects       Int
+  contributions  Int
+  commits        Int
+  pullRequests   Int
+  recentActivity String
+  updatedAt      DateTime @updatedAt
+}

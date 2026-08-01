@@ -1,44 +1,5 @@
-import jobs from '@/data/jobs.json';
 import type { Job, JobApplication } from '@/types';
-
-interface StoredRecruiterJob {
-  id: string;
-  title: string;
-  location: string;
-  type: string;
-  skills: string;
-  description: string;
-}
-
-interface StoredCompany {
-  name?: string;
-}
-
-function readSession<T>(key: string, fallback: T): T {
-  try {
-    const value = sessionStorage.getItem(key);
-    return value ? JSON.parse(value) as T : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-export function getAvailableJobs(): Job[] {
-  const company = readSession<StoredCompany>('talentai_company', {});
-  const recruiterJobs = readSession<StoredRecruiterJob[]>('talentai_recruiter_jobs', []).map((job) => ({
-    ...job,
-    company: company.name || 'TalentAI Partner',
-    salary: 'Competitive',
-    skills: job.skills.split(',').map((skill) => skill.trim()).filter(Boolean),
-  }));
-
-  return [...jobs, ...recruiterJobs];
-}
-
-export function getApplications(): JobApplication[] {
-  return readSession<JobApplication[]>('talentai_job_applications', []);
-}
-
-export function saveApplications(applications: JobApplication[]) {
-  sessionStorage.setItem('talentai_job_applications', JSON.stringify(applications));
-}
+export async function getAvailableJobs(): Promise<Job[]> { const response = await fetch('/api/jobs'); return (await response.json()).jobs; }
+export async function getApplications(): Promise<JobApplication[]> { const response = await fetch('/api/applications'); return (await response.json()).applications; }
+export async function createApplication(application: Omit<JobApplication, 'id' | 'appliedAt' | 'status'>): Promise<JobApplication> { const response = await fetch('/api/applications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(application) }); return (await response.json()).application; }
+export async function updateApplicationStatus(id: string, status: JobApplication['status']): Promise<JobApplication> { const response = await fetch(`/api/applications/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }); return (await response.json()).application; }

@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { Button, Card, Badge } from '@/components/ui';
 import { useResumeUpload } from '@/hooks/useResumeUpload';
-import { getCachedAnalysis, markResumeForAnalysis } from '@/lib/analysis-cache';
 import { cn } from '@/lib/utils';
 
 /* ─── Status Steps ─── */
@@ -44,6 +43,7 @@ export default function UploadPage() {
     extractedText,
     pageCount,
     fileData,
+    resumeId,
     error,
     upload,
     reset,
@@ -53,7 +53,7 @@ export default function UploadPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (!params.get('replace')) {
-      const saved = localStorage.getItem('talentai_resume') || sessionStorage.getItem('talentai_resume');
+      const saved = localStorage.getItem('talentai_resume_id') || sessionStorage.getItem('talentai_resume_id');
       if (saved) {
         router.push('/dashboard');
       }
@@ -80,7 +80,7 @@ export default function UploadPage() {
   });
 
   const handleAnalyze = () => {
-    if (extractedText) {
+    if (extractedText && resumeId) {
       const fingerprint = { fileName, fileSize, lastModified };
       const storedResume = {
         text: extractedText,
@@ -89,6 +89,7 @@ export default function UploadPage() {
         lastModified,
         pageCount,
         fileData,
+        resumeId,
         fingerprint,
       };
       // Persist the extracted resume so the cached report can be reused after future visits.
@@ -97,7 +98,8 @@ export default function UploadPage() {
         JSON.stringify(storedResume),
       );
       sessionStorage.setItem('talentai_resume', JSON.stringify(storedResume));
-      if (!getCachedAnalysis(fingerprint)) markResumeForAnalysis();
+      localStorage.setItem('talentai_resume_id', resumeId);
+      sessionStorage.setItem('talentai_resume_id', resumeId);
       router.push('/dashboard');
     }
   };

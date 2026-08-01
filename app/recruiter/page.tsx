@@ -13,7 +13,7 @@ import { getVerifiedSkillProfile } from '@/lib/skill-verification';
 import { extractProjectsFromReport } from '@/lib/project-extraction';
 import { generateFraudInsights } from '@/lib/fraud-detection';
 import { ProjectCard } from '@/components/ProjectCard';
-import { getApplications, saveApplications } from '@/lib/demo-jobs';
+import { getApplications, getAvailableJobs, updateApplicationStatus } from '@/lib/demo-jobs';
 import type { JobApplication, CandidateRanking, Job, InterviewPrep } from '@/types';
 import { getCachedCandidateRanking, saveCachedCandidateRanking } from '@/lib/candidate-ranking-cache';
 import { getCachedInterviewPrep, saveCachedInterviewPrep } from '@/lib/interview-cache';
@@ -62,44 +62,13 @@ const getHash = (str: string) => {
 
 
 
-const MOCK_HACKATHONS = [
-  {
-    id: 'h1',
-    name: 'AI Innovation Hack 2026',
-    team: 'Neural Knights',
-    project: 'AutoDev: Self-healing Code',
-    innovation: 96,
-    technical: 92,
-    business: 85,
-    overall: 91,
-    members: ['Alice Chen', 'Bob Smith'],
-  },
-  {
-    id: 'h2',
-    name: 'Global Fintech Challenge',
-    team: 'BlockChain Bros',
-    project: 'DeFi Micro-lending Platform',
-    innovation: 88,
-    technical: 85,
-    business: 94,
-    overall: 89,
-    members: ['Charlie Davis'],
-  },
-  {
-    id: 'h3',
-    name: 'Web3 & Future Web',
-    team: 'Quantum UX',
-    project: 'Zero-latency UI Framework',
-    innovation: 91,
-    technical: 95,
-    business: 78,
-    overall: 88,
-    members: ['Diana Prince', 'Evan Wright'],
-  }
-];
+interface Hackathon { id: string; name: string; team: string; project: string; innovation: number; technical: number; business: number; overall: number; members: string[]; }
 
 function HackathonsPipeline() {
   const [shortlisted, setShortlisted] = useState<Record<string, boolean>>({});
+  const [hackathons, setHackathons] = useState<Hackathon[]>([]);
+
+  useEffect(() => { void fetch('/api/hackathons').then((response) => response.json()).then((data) => setHackathons(data.hackathons || [])).catch(() => undefined); }, []);
 
   return (
     <>
@@ -108,7 +77,7 @@ function HackathonsPipeline() {
       <p className="mt-2 text-slate-400">Discover and shortlist top talent directly from partner hackathons.</p>
 
       <div className="mt-8 space-y-6">
-        {MOCK_HACKATHONS.map((h) => (
+        {hackathons.map((h) => (
           <Card key={h.id} className="p-6">
             <div className="flex flex-col md:flex-row justify-between gap-5 mb-4">
               <div>
@@ -663,30 +632,46 @@ export default function RecruiterPortal() {
   useEffect(() => {
     setRecruiterName(sessionStorage.getItem('talentai_recruiter') || '');
     setCompany(readSession('talentai_company', defaultCompany));
-    setJobs(readSession('talentai_recruiter_jobs', []));
-    setApplications(getApplications());
+    void Promise.all([getAvailableJobs(), getApplications()]).then(([availableJobs, savedApplications]) => {
+      setJobs(availableJobs.map((job) => ({ ...job, skills: job.skills.join(','), createdAt: new Date().toISOString() })));
+      setApplications(savedApplications);
+    });
     setIsReady(true);
   }, [searchParams]);
 
-  const persistJobs = (nextJobs: RecruiterJob[]) => {
-    setJobs(nextJobs);
-    sessionStorage.setItem('talentai_recruiter_jobs', JSON.stringify(nextJobs));
-  };
-  const saveJob = (job: Omit<RecruiterJob, 'id' | 'createdAt'>) => {
-    const nextJobs = requestedEditId
-      ? jobs.map((current) => current.id === requestedEditId ? { ...current, ...job } : current)
-      : [{ ...job, id: crypto.randomUUID(), createdAt: new Date().toISOString() }, ...jobs];
-    persistJobs(nextJobs);
+  const saveJob = async (job: Omit<RecruiterJob, 'id' | 'createdAt'>) => {
+    const response = await fetch(requestedEditId ? `/api/jobs/${requestedEditId}` : '/api/jobs', { method: requestedEditId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...job, company: company.name }) });
+    if (response.ok) {
+      const saved = (await response.json()).job as Job;
+      const mapped = { ...saved, skills: saved.skills.join(','), createdAt: new Date().toISOString() };
+      setJobs((current) => requestedEditId ? current.map((item) => item.id === mapped.id ? mapped : item) : [mapped, ...current]);
+    }
     router.push('/recruiter/jobs');
   };
-  const deleteJob = (id: string) => {
-    persistJobs(jobs.filter((job) => job.id !== id));
+  const deleteJob = async (id: string) => {
+    await fetch(`/api/jobs/${id}`, { method: 'DELETE' });
+    setJobs((current) => current.filter((job) => job.id !== id));
     router.push('/recruiter/jobs');
   };
-  const updateApplication = (id: string, status: JobApplication['status']) => {
-    const nextApplications = applications.map((application) => application.id === id ? { ...application, status } : application);
-    setApplications(nextApplications);
-    saveApplications(nextApplications);
+  const updateApplication = async (id: string, status: JobApplication['status']) => {
+    const application = await updateApplicationStatus(id, status);
+    setApplications((current) => current.map((item) => item.id === id ? application : item));
+  };
+  const login = async (event: FormEvent) => {
+    event.preventDefault();
+    const name = loginName.trim();
+    if (!name) return;
+
+    const response = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+
+    if (response.ok) {
+      sessionStorage.setItem('talentai_recruiter', name);
+      setRecruiterName(name);
+    }
   };
   const logout = () => { sessionStorage.removeItem('talentai_recruiter'); router.push('/recruiter'); };
   const editJob = jobs.find((job) => job.id === requestedEditId) ?? null;
@@ -783,7 +768,7 @@ export default function RecruiterPortal() {
   });
 
   if (!isReady) return null;
-  if (!recruiterName) return <div className="min-h-screen grid-bg"><nav className="relative z-10 mx-auto flex max-w-7xl items-center px-6 py-5"><Link href="/" className="flex items-center gap-2.5"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent"><BrainCircuit className="h-5 w-5 text-white" /></div><span className="text-xl font-bold">TalentAI</span></Link></nav><main className="relative z-10 mx-auto flex min-h-[75vh] max-w-md items-center px-6"><Card className="w-full"><Badge variant="accent">Recruiter Portal</Badge><h1 className="mt-4 text-2xl font-bold">Welcome back</h1><p className="mt-2 text-sm text-slate-400">Sign in to manage your company and open roles.</p><form className="mt-6" onSubmit={(event: FormEvent) => { event.preventDefault(); const name = loginName.trim(); if (name) { sessionStorage.setItem('talentai_recruiter', name); setRecruiterName(name); } }}><label className="text-sm text-slate-300">Your name<input required value={loginName} onChange={(e) => setLoginName(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-black/20 px-3 py-2.5 text-white outline-none focus:border-primary" placeholder="Alex Morgan" /></label><Button className="mt-5 w-full" type="submit">Enter recruiter portal</Button></form></Card></main></div>;
+  if (!recruiterName) return <div className="min-h-screen grid-bg"><nav className="relative z-10 mx-auto flex max-w-7xl items-center px-6 py-5"><Link href="/" className="flex items-center gap-2.5"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent"><BrainCircuit className="h-5 w-5 text-white" /></div><span className="text-xl font-bold">TalentAI</span></Link></nav><main className="relative z-10 mx-auto flex min-h-[75vh] max-w-md items-center px-6"><Card className="w-full"><Badge variant="accent">Recruiter Portal</Badge><h1 className="mt-4 text-2xl font-bold">Welcome back</h1><p className="mt-2 text-sm text-slate-400">Sign in to manage your company and open roles.</p><form className="mt-6" onSubmit={login}><label className="text-sm text-slate-300">Your name<input required value={loginName} onChange={(e) => setLoginName(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-black/20 px-3 py-2.5 text-white outline-none focus:border-primary" placeholder="Alex Morgan" /></label><Button className="mt-5 w-full" type="submit">Enter recruiter portal</Button></form></Card></main></div>;
 
   const navigation: { id: PortalView; label: string; href: string; icon: typeof BarChart3 }[] = [
     { id: 'dashboard', label: 'Analytics', href: '/recruiter/dashboard', icon: BarChart3 },

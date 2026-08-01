@@ -24,7 +24,6 @@ import {
   Plus
 } from 'lucide-react';
 import { Badge, Button, Card, Progress, ScoreCircle } from '@/components/ui';
-import { consumeResumeAnalysisRequest, getCachedAnalysis, saveCachedAnalysis, type ResumeFingerprint } from '@/lib/analysis-cache';
 import { getVerifiedSkillProfile } from '@/lib/skill-verification';
 import { extractProjectsFromReport } from '@/lib/project-extraction';
 import { ProjectCard } from '@/components/ProjectCard';
@@ -33,12 +32,12 @@ import type { TalentReport, CandidateProject } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface StoredResume {
+  id: string;
   text: string;
   fileName: string | null;
   fileSize: number | null;
   lastModified: number | null;
   fileData?: string | null;
-  fingerprint: ResumeFingerprint;
 }
 
 function ReportList({ items, empty = 'No signals found.' }: { items: string[]; empty?: string }) {
@@ -75,20 +74,7 @@ const getHash = (str: string) => {
   return Math.abs(hash);
 };
 
-const getMockTeamContribution = () => {
-  return {
-    score: 88,
-    projects: 12,
-    contributions: 432,
-    commits: 854,
-    pullRequests: 89,
-    recentActivity: [
-      { repo: "frontend-monorepo", action: "Merged PR #442", date: "2 days ago" },
-      { repo: "ui-components", action: "Pushed 4 commits", date: "5 days ago" },
-      { repo: "backend-services", action: "Opened PR #102", date: "1 week ago" }
-    ]
-  };
-};
+interface ContributionAnalytics { score: number; projects: number; contributions: number; commits: number; pullRequests: number; recentActivity: { repo: string; action: string; date: string }[]; }
 
 export default function DashboardPage() {
   const [resume, setResume] = useState<StoredResume | null>(null);
@@ -99,6 +85,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [lastAnalyzed, setLastAnalyzed] = useState<string | null>(null);
+  const [teamContribution, setTeamContribution] = useState<ContributionAnalytics | null>(null);
 
   const analyzeResume = async (storedResume: StoredResume) => {
     setIsLoading(true);
@@ -108,7 +95,7 @@ export default function DashboardPage() {
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeText: storedResume.text }),
+        body: JSON.stringify({ resumeId: storedResume.id }),
       });
       const data: unknown = await response.json();
 
@@ -120,9 +107,9 @@ export default function DashboardPage() {
       }
 
       const talentReport = data.report as TalentReport;
-      const cached = saveCachedAnalysis(talentReport, storedResume.fingerprint);
-      setReport(cached.report);
-      setLastAnalyzed(cached.analyzedAt);
+      setReport(talentReport);
+      const analyzedAt = (data as { analyzedAt?: unknown }).analyzedAt;
+      setLastAnalyzed(typeof analyzedAt === 'string' ? analyzedAt : new Date().toISOString());
     } catch (analysisError) {
       setError(analysisError instanceof Error ? analysisError.message : 'Unable to analyze this resume. Please try again.');
     } finally {
@@ -131,33 +118,37 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    const savedResume = localStorage.getItem('talentai_resume') || sessionStorage.getItem('talentai_resume');
-    if (!savedResume) {
+    const resumeId = localStorage.getItem('talentai_resume_id') || sessionStorage.getItem('talentai_resume_id');
+    if (!resumeId) {
       setError('Upload a resume before requesting an analysis.');
       setIsLoading(false);
       return;
     }
 
-    try {
-      const parsed = JSON.parse(savedResume) as StoredResume;
-      if (!parsed.text || typeof parsed.text !== 'string' || !parsed.fingerprint) throw new Error();
-      setResume(parsed);
-      const cached = getCachedAnalysis(parsed.fingerprint);
-      if (cached) {
-        setReport(cached.report);
-        setLastAnalyzed(cached.analyzedAt);
-        setIsLoading(false);
-      } else if (consumeResumeAnalysisRequest()) {
-        void analyzeResume(parsed);
-      } else {
-        setError('This resume has not been analyzed yet. Upload it again to start analysis.');
+    void (async () => {
+      try {
+        const response = await fetch(`/api/resumes/${resumeId}`);
+        const data: unknown = await response.json();
+        if (!response.ok || !data || typeof data !== 'object' || !('resume' in data)) throw new Error();
+
+        const storedResume = (data as { resume: StoredResume }).resume;
+        setResume(storedResume);
+        const analysis = (data as { analysis?: { report: TalentReport; analyzedAt: string } | null }).analysis;
+        if (analysis) {
+          setReport(analysis.report);
+          setLastAnalyzed(analysis.analyzedAt);
+          setIsLoading(false);
+        } else {
+          await analyzeResume(storedResume);
+        }
+      } catch {
+        setError('The uploaded resume could not be read. Please upload it again.');
         setIsLoading(false);
       }
-    } catch {
-      setError('The uploaded resume could not be read. Please upload it again.');
-      setIsLoading(false);
-    }
+    })();
   }, []);
+
+  useEffect(() => { void fetch('/api/contributions').then((response) => response.json()).then((data) => setTeamContribution(data.analytics)).catch(() => undefined); }, []);
 
   useEffect(() => {
     if (report) {
@@ -179,7 +170,6 @@ export default function DashboardPage() {
     setProjects(nextProjects);
     const updatedReport: TalentReport = { ...report, projects: nextProjects };
     setReport(updatedReport);
-    saveCachedAnalysis(updatedReport, resume.fingerprint);
   };
 
   const handleDeleteProject = (projectId: string) => {
@@ -188,11 +178,9 @@ export default function DashboardPage() {
     setProjects(nextProjects);
     const updatedReport: TalentReport = { ...report, projects: nextProjects };
     setReport(updatedReport);
-    saveCachedAnalysis(updatedReport, resume.fingerprint);
   };
 
   const skillProfile = report ? getVerifiedSkillProfile(report) : null;
-  const teamContribution = getMockTeamContribution();
 
   return (
     <div className="min-h-screen grid-bg">
@@ -241,7 +229,6 @@ export default function DashboardPage() {
                 </>
               )}
               <Link href="/upload?replace=true"><Button variant="ghost" size="sm">Replace Resume</Button></Link>
-              <Button variant="ghost" size="sm" onClick={() => resume && void analyzeResume(resume)}>Re-analyze Resume</Button>
             </>
           )}
         </div>
@@ -435,30 +422,30 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="flex items-center gap-2 text-xl font-bold text-white"><Github className="text-accent" /> Team Contribution Analytics</h2>
-                  <p className="mt-2 text-sm text-slate-400">Mock GitHub integration demonstrating open-source and team activity signals.</p>
+                  <p className="mt-2 text-sm text-slate-400">Open-source and team activity signals.</p>
                 </div>
-                <ScoreCircle value={teamContribution.score} label="Impact" />
+                <ScoreCircle value={teamContribution?.score ?? 0} label="Impact" />
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 <div className="bg-black/20 p-4 rounded-xl border border-border text-center">
                   <FileText className="h-5 w-5 mx-auto mb-2 text-primary" />
-                  <p className="text-2xl font-bold">{teamContribution.projects}</p>
+                  <p className="text-2xl font-bold">{teamContribution?.projects ?? 0}</p>
                   <p className="text-xs text-slate-400 uppercase tracking-wider">Projects</p>
                 </div>
                 <div className="bg-black/20 p-4 rounded-xl border border-border text-center">
                   <Activity className="h-5 w-5 mx-auto mb-2 text-emerald-400" />
-                  <p className="text-2xl font-bold">{teamContribution.contributions}</p>
+                  <p className="text-2xl font-bold">{teamContribution?.contributions ?? 0}</p>
                   <p className="text-xs text-slate-400 uppercase tracking-wider">Contributions</p>
                 </div>
                 <div className="bg-black/20 p-4 rounded-xl border border-border text-center">
                   <GitCommit className="h-5 w-5 mx-auto mb-2 text-accent" />
-                  <p className="text-2xl font-bold">{teamContribution.commits}</p>
+                  <p className="text-2xl font-bold">{teamContribution?.commits ?? 0}</p>
                   <p className="text-xs text-slate-400 uppercase tracking-wider">Commits</p>
                 </div>
                 <div className="bg-black/20 p-4 rounded-xl border border-border text-center">
                   <GitPullRequest className="h-5 w-5 mx-auto mb-2 text-amber-400" />
-                  <p className="text-2xl font-bold">{teamContribution.pullRequests}</p>
+                  <p className="text-2xl font-bold">{teamContribution?.pullRequests ?? 0}</p>
                   <p className="text-xs text-slate-400 uppercase tracking-wider">Pull Requests</p>
                 </div>
               </div>
@@ -466,7 +453,7 @@ export default function DashboardPage() {
               <div className="border-t border-border pt-6">
                 <h3 className="text-md font-semibold mb-4 text-white">Recent Activity</h3>
                 <div className="space-y-3">
-                  {teamContribution.recentActivity.map((activity, idx) => (
+                  {(teamContribution?.recentActivity ?? []).map((activity, idx) => (
                     <div key={idx} className="flex items-center justify-between text-sm p-3 rounded-lg hover:bg-white/5 transition-colors">
                       <div className="flex items-center gap-3">
                         <Github size={16} className="text-slate-400" />

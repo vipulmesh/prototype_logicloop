@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ArrowLeft, BrainCircuit, BriefcaseBusiness, MapPin, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Badge, Button, Card } from '@/components/ui';
 import { getApplications, getAvailableJobs } from '@/lib/demo-jobs';
-import { getCachedAnalysis, type ResumeFingerprint } from '@/lib/analysis-cache';
 import type { Job, JobApplication, TalentReport } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -15,19 +14,15 @@ export default function JobsPage() {
   const [report, setReport] = useState<TalentReport | null>(null);
 
   useEffect(() => {
-    setJobs(getAvailableJobs());
-    setApplications(getApplications());
+    void Promise.all([getAvailableJobs(), getApplications()]).then(([availableJobs, savedApplications]) => {
+      setJobs(availableJobs);
+      setApplications(savedApplications);
+    });
 
-    const savedResume = localStorage.getItem('talentai_resume') || sessionStorage.getItem('talentai_resume');
-    if (savedResume) {
-      try {
-        const parsed = JSON.parse(savedResume) as { fingerprint: ResumeFingerprint };
-        const cached = getCachedAnalysis(parsed.fingerprint);
-        if (cached) setReport(cached.report);
-      } catch {
-        // ignore
-      }
-    }
+    const resumeId = localStorage.getItem('talentai_resume_id') || sessionStorage.getItem('talentai_resume_id');
+    if (resumeId) void fetch(`/api/resumes/${resumeId}`).then((response) => response.json()).then((data) => {
+      if (data.analysis?.report) setReport(data.analysis.report as TalentReport);
+    }).catch(() => undefined);
   }, []);
 
   const calculateMatch = (job: Job, report: TalentReport | null) => {
