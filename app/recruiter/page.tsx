@@ -14,7 +14,7 @@ import { extractProjectsFromReport } from '@/lib/project-extraction';
 import { generateFraudInsights } from '@/lib/fraud-detection';
 import { ProjectCard } from '@/components/ProjectCard';
 import { getApplications, getAvailableJobs, updateApplicationStatus } from '@/lib/demo-jobs';
-import type { JobApplication, CandidateRanking, Job, InterviewPrep } from '@/types';
+import type { JobApplication, CandidateRanking, CandidateProject, Job, InterviewPrep } from '@/types';
 import { getCachedCandidateRanking, saveCachedCandidateRanking } from '@/lib/candidate-ranking-cache';
 import { getCachedInterviewPrep, saveCachedInterviewPrep } from '@/lib/interview-cache';
 import { cn } from '@/lib/utils';
@@ -38,6 +38,14 @@ interface RecruiterJob {
   skills: string;
   description: string;
   createdAt: string;
+}
+
+interface DiscoverySkill { name: string; level: 'Beginner' | 'Intermediate' | 'Advanced'; confidence: number; }
+interface DiscoveryCandidate {
+  id: string; name: string; email: string | null; profilePhoto: string | null; registeredAt: string;
+  resumeStatus: string; resumeName: string | null; talentScore: number | null; atsScore: number | null;
+  verifiedSkills: { candidateLevel?: string; topStrongestSkills?: DiscoverySkill[] };
+  extractedProjects: CandidateProject[]; technicalSkills: string[]; education: string; experience: string;
 }
 
 const defaultCompany: CompanyProfile = { name: '', industry: '', location: '', website: '', description: '' };
@@ -164,7 +172,7 @@ function HiringAnalyticsDashboard({ jobs, applications }: { jobs: RecruiterJob[]
   );
 }
 
-function CandidateFullProfile({ application, onClose }: { application: JobApplication; onClose: () => void }) {
+function LegacyCandidateFullProfile({ application, onClose }: { application: JobApplication; onClose: () => void }) {
   const analysis = application.analysis;
   const prof = analysis ? getVerifiedSkillProfile(analysis) : null;
   const projs = analysis ? extractProjectsFromReport(analysis) : [];
@@ -214,7 +222,7 @@ function CandidateFullProfile({ application, onClose }: { application: JobApplic
   );
 }
 
-function CandidateDirectory({ applications, rankings, onViewProfile }: { applications: JobApplication[], rankings: Record<string, CandidateRanking>, onViewProfile: (id: string) => void }) {
+function LegacyCandidateDirectory({ applications, rankings, onViewProfile }: { applications: JobApplication[], rankings: Record<string, CandidateRanking>, onViewProfile: (id: string) => void }) {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'talent'|'ats'|'match'|'recent'>('talent');
   const [minTalent, setMinTalent] = useState(0);
@@ -295,6 +303,48 @@ function CandidateDirectory({ applications, rankings, onViewProfile }: { applica
       </div>
     </div>
   );
+}
+
+function CandidateFullProfile({ candidateId, onClose }: { candidateId: string; onClose: () => void }) {
+  const [candidate, setCandidate] = useState<(DiscoveryCandidate & { resumes: Array<{ id: string; fileName: string; createdAt: string; status: string; talentScore: number | null; atsScore: number | null; report: Record<string, unknown>; verifiedSkills: { candidateLevel?: string; topStrongestSkills?: DiscoverySkill[] }; extractedProjects: CandidateProject[] }> }) | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    setCandidate(null); setError('');
+    fetch(`/api/candidates/${candidateId}`).then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Unable to load candidate.');
+      if (active) setCandidate(data.candidate);
+    }).catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : 'Unable to load candidate.'); });
+    return () => { active = false; };
+  }, [candidateId]);
+
+  if (error) return <Card className="text-center p-8"><ShieldAlert className="mx-auto h-8 w-8 text-amber-400 mb-3" /><p className="text-slate-300">{error}</p><Button variant="ghost" size="sm" className="mt-4" onClick={onClose}><ArrowLeft size={14} /> Back</Button></Card>;
+  if (!candidate) return <Card className="flex items-center justify-center gap-3 p-10 text-slate-400"><Loader2 className="h-5 w-5 animate-spin text-primary" />Loading candidate profile…</Card>;
+  const resume = candidate.resumes[0];
+  const skills = resume?.verifiedSkills?.topStrongestSkills || [];
+  const projects = resume?.extractedProjects || [];
+  const report = resume?.report || {};
+  return <div className="space-y-6"><div className="flex items-start justify-between gap-4"><div className="flex gap-4"><div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/15 font-semibold text-primary">{candidate.profilePhoto ? <img src={candidate.profilePhoto} alt="" className="h-full w-full object-cover" /> : candidate.name.slice(0, 2).toUpperCase()}</div><div><Badge variant="default">Candidate Profile</Badge><h1 className="mt-2 text-2xl font-bold">{candidate.name}</h1><p className="mt-1 text-sm text-slate-400">{candidate.email || 'Email not available'} · Registered {new Date(candidate.registeredAt).toLocaleDateString()}</p><div className="mt-3 flex flex-wrap gap-2"><Badge variant="accent">Talent {resume?.talentScore ?? '—'}</Badge><Badge variant="success">ATS {resume?.atsScore ?? '—'}</Badge><Badge variant="muted">{resume?.status || 'Not uploaded'}</Badge></div></div></div><Button variant="ghost" size="sm" onClick={onClose}><ArrowLeft size={14} /> Back</Button></div><div className="grid gap-6 lg:grid-cols-3"><div className="space-y-6 lg:col-span-2"><Card className="p-5"><h3 className="text-base font-bold">Experience &amp; Education</h3><div className="mt-4 space-y-3"><div className="rounded-xl border border-border bg-black/20 p-4"><p className="text-xs font-semibold uppercase text-slate-400">Experience</p><p className="mt-1 text-sm leading-relaxed text-slate-300">{typeof report.experienceSummary === 'string' && report.experienceSummary || 'Not available'}</p></div><div className="rounded-xl border border-border bg-black/20 p-4"><p className="text-xs font-semibold uppercase text-slate-400">Education</p><p className="mt-1 text-sm leading-relaxed text-slate-300">{typeof report.educationSummary === 'string' && report.educationSummary || 'Not available'}</p></div></div></Card>{projects.length > 0 && <Card className="p-5"><h3 className="flex items-center gap-2 text-base font-bold"><FolderGit2 className="text-primary" size={16} />Extracted Projects ({projects.length})</h3><div className="mt-4 space-y-4">{projects.map((project) => <ProjectCard key={project.id} project={project} isRecruiterView />)}</div></Card>}</div><div className="space-y-4"><Card className="p-4"><h3 className="flex items-center gap-2 text-sm font-bold"><ShieldCheck className="text-primary" size={15} />Verified Skills</h3><Badge variant="accent" className="mt-3">{resume?.verifiedSkills?.candidateLevel || 'Unrated'}</Badge><div className="mt-3 flex flex-wrap gap-1.5">{skills.length ? skills.map((skill) => <Badge key={skill.name} variant="success" className="text-xs">{skill.name} · {skill.level}</Badge>) : <span className="text-sm text-slate-500">No verified skills yet.</span>}</div></Card><Card className="p-4"><p className="text-xs font-semibold uppercase text-slate-400">Resume</p><p className="mt-2 text-sm text-slate-300">{resume?.fileName || 'No resume uploaded'}</p></Card></div></div></div>;
+}
+
+function CandidateDirectory({ candidates, loading, error, onViewProfile }: { candidates: DiscoveryCandidate[]; loading: boolean; error: string; onViewProfile: (id: string) => void }) {
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'talent' | 'ats' | 'recent'>('talent');
+  const [minTalent, setMinTalent] = useState(0);
+  const [minAts, setMinAts] = useState(0);
+  const [skillLevel, setSkillLevel] = useState('all');
+  const filtered = candidates.filter((candidate) => {
+    if ((candidate.talentScore ?? 0) < minTalent || (candidate.atsScore ?? 0) < minAts) return false;
+    const skills = candidate.verifiedSkills.topStrongestSkills || [];
+    if (skillLevel !== 'all' && !skills.some((skill) => skill.level === skillLevel)) return false;
+    const query = search.trim().toLowerCase();
+    if (!query) return true;
+    const technologies = candidate.extractedProjects.flatMap((project) => project.technologies || []);
+    return candidate.name.toLowerCase().includes(query) || candidate.technicalSkills.some((skill) => skill.toLowerCase().includes(query)) || skills.some((skill) => skill.name.toLowerCase().includes(query)) || technologies.some((technology) => technology.toLowerCase().includes(query));
+  }).sort((a, b) => sortBy === 'talent' ? (b.talentScore ?? -1) - (a.talentScore ?? -1) : sortBy === 'ats' ? (b.atsScore ?? -1) - (a.atsScore ?? -1) : new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime());
+  return <div className="space-y-5"><div><Badge variant="accent">AI Candidate Discovery</Badge><h1 className="mt-3 text-3xl font-bold">Candidate Directory</h1><p className="mt-2 text-slate-400">Search, filter and discover candidates from your TalentAI database.</p></div><div className="flex flex-col gap-3 md:flex-row"><div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-black/20 px-3 py-2.5"><Search size={15} className="shrink-0 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name, skills, or technologies..." className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500" />{search && <button onClick={() => setSearch('')} className="text-xs text-slate-400 hover:text-white">Clear</button>}</div><select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="rounded-xl border border-border bg-black/30 px-3 py-2 text-sm text-white outline-none"><option value="talent">Highest Talent Score</option><option value="ats">Highest ATS Score</option><option value="recent">Recently Registered</option></select></div><div className="flex flex-wrap gap-3"><label className="flex items-center gap-2 rounded-xl border border-border bg-black/20 px-3 py-2 text-sm text-slate-300">Talent ≥ <input type="range" min="0" max="100" value={minTalent} onChange={(event) => setMinTalent(Number(event.target.value))} className="w-20" /><b>{minTalent}</b></label><label className="flex items-center gap-2 rounded-xl border border-border bg-black/20 px-3 py-2 text-sm text-slate-300">ATS ≥ <input type="range" min="0" max="100" value={minAts} onChange={(event) => setMinAts(Number(event.target.value))} className="w-20" /><b>{minAts}</b></label><select value={skillLevel} onChange={(event) => setSkillLevel(event.target.value)} className="rounded-xl border border-border bg-black/30 px-3 py-2 text-sm text-white outline-none"><option value="all">All skill levels</option><option value="Advanced">Advanced</option><option value="Intermediate">Intermediate</option><option value="Beginner">Beginner</option></select></div>{loading && <Card className="flex items-center justify-center gap-3 p-8 text-slate-400"><Loader2 className="h-5 w-5 animate-spin text-primary" />Loading candidates…</Card>}{error && <Card className="p-8 text-center"><ShieldAlert className="mx-auto mb-3 h-8 w-8 text-amber-400" /><p className="text-slate-300">{error}</p></Card>}{!loading && !error && <><p className="text-xs text-slate-500">{filtered.length} candidate{filtered.length === 1 ? '' : 's'} found</p>{filtered.length === 0 && <Card className="p-8 text-center"><Users className="mx-auto mb-3 h-8 w-8 text-muted-foreground" /><p className="text-slate-400">No candidates match your search.</p></Card>}<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{filtered.map((candidate) => { const skills = candidate.verifiedSkills.topStrongestSkills || []; return <Card key={candidate.id} className="flex flex-col gap-3 p-4 transition-colors hover:border-primary/40"><div className="flex items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/15 text-sm font-semibold text-primary">{candidate.profilePhoto ? <img src={candidate.profilePhoto} alt="" className="h-full w-full object-cover" /> : candidate.name.slice(0, 2).toUpperCase()}</div><div className="min-w-0"><h3 className="truncate font-semibold leading-tight text-white">{candidate.name}</h3><p className="mt-0.5 truncate text-xs text-slate-400">{candidate.email || 'Email not available'}</p></div></div><div className="flex flex-wrap gap-1.5"><Badge variant="accent" className="text-xs">Talent {candidate.talentScore ?? '—'}</Badge><Badge variant="success" className="text-xs">ATS {candidate.atsScore ?? '—'}</Badge><Badge variant="muted" className="text-xs">{candidate.resumeStatus}</Badge>{candidate.verifiedSkills.candidateLevel && <Badge variant="default" className="text-xs">{candidate.verifiedSkills.candidateLevel}</Badge>}</div>{skills.length > 0 && <div><p className="mb-1 text-[10px] font-semibold uppercase text-slate-500">Verified Skills</p><div className="flex flex-wrap gap-1">{skills.slice(0, 4).map((skill) => <Badge key={skill.name} variant="success" className="px-1.5 text-[10px]">{skill.name}</Badge>)}</div></div>}{candidate.extractedProjects.length > 0 && <div><p className="mb-1 text-[10px] font-semibold uppercase text-slate-500">Projects</p><div className="flex flex-wrap gap-1">{candidate.extractedProjects.slice(0, 2).map((project) => <Badge key={project.id} variant="muted" className="px-1.5 text-[10px]">{project.title}</Badge>)}</div></div>}<Button size="sm" variant="outline" className="mt-auto w-full" onClick={() => onViewProfile(candidate.id)}>View Full Profile</Button></Card>; })}</div></>}</div>;
 }
 
 function ApplicantRankingCard({
@@ -636,6 +686,9 @@ function RecruiterPortal() {
   const [rankingErrors, setRankingErrors] = useState<Record<string, string>>({});
   const [techSearch, setTechSearch] = useState('');
   const [directoryProfileId, setDirectoryProfileId] = useState<string|null>(null);
+  const [directoryCandidates, setDirectoryCandidates] = useState<DiscoveryCandidate[]>([]);
+  const [isDirectoryLoading, setIsDirectoryLoading] = useState(false);
+  const [directoryError, setDirectoryError] = useState('');
   const rankingTracker = useRef(new Set<string>());
 
   useEffect(() => {
@@ -662,6 +715,21 @@ function RecruiterPortal() {
     });
     setIsReady(true);
   }, [searchParams]);
+
+  useEffect(() => {
+    if (requestedView !== 'directory') return;
+    let active = true;
+    setIsDirectoryLoading(true);
+    setDirectoryError('');
+    fetch('/api/candidates').then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Unable to load candidates.');
+      if (active) setDirectoryCandidates(data.candidates || []);
+    }).catch((reason: unknown) => {
+      if (active) setDirectoryError(reason instanceof Error ? reason.message : 'Unable to load candidates.');
+    }).finally(() => { if (active) setIsDirectoryLoading(false); });
+    return () => { active = false; };
+  }, [requestedView]);
 
   const saveJob = async (job: Omit<RecruiterJob, 'id' | 'createdAt'>) => {
     const response = await fetch(requestedEditId ? `/api/jobs/${requestedEditId}` : '/api/jobs', { method: requestedEditId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...job, company: company.name }) });
@@ -817,7 +885,7 @@ function RecruiterPortal() {
     {requestedView === 'dashboard' && <HiringAnalyticsDashboard jobs={jobs} applications={applications}/>}
     {requestedView === 'jobs' && detailJob && <><Link href="/recruiter/jobs"><Button variant="ghost" size="sm"><ArrowLeft size={15} /> My jobs</Button></Link><Card className="mt-6"><div className="flex flex-col justify-between gap-5 md:flex-row"><div><Badge variant="success">Open role</Badge><h1 className="mt-4 text-3xl font-bold">{detailJob.title}</h1><p className="mt-2 text-sm text-muted-foreground">{detailJob.location} · {detailJob.type} · Posted {new Date(detailJob.createdAt).toLocaleDateString()}</p></div><div className="flex h-fit flex-wrap gap-2"><Link href={`/recruiter/jobs/${detailJob.id}/edit`}><Button variant="ghost" size="sm"><Edit3 size={14} /> Edit</Button></Link><Link href={`/recruiter/jobs/${detailJob.id}/applicants`}><Button size="sm"><Users size={14} /> View applicants</Button></Link></div></div><div className="mt-8 border-t border-border pt-6"><h2 className="text-lg font-semibold">About the role</h2><p className="mt-3 leading-relaxed text-slate-400">{detailJob.description}</p><h2 className="mt-7 text-lg font-semibold">Key skills</h2><div className="mt-3 flex flex-wrap gap-2">{detailJob.skills.split(',').filter(Boolean).map((skill) => <Badge key={skill} variant="muted">{skill.trim()}</Badge>)}</div></div></Card></>}
     {requestedView === 'jobs' && !detailJob && <><div className="flex flex-wrap items-end justify-between gap-4"><div><Badge variant="accent">Job management</Badge><h1 className="mt-4 text-3xl font-bold">Posted jobs</h1><p className="mt-2 text-slate-400">Create and manage roles for your hiring team.</p></div><Link href="/recruiter/jobs/new"><Button><Plus size={16} /> Create job</Button></Link></div>{(searchParams.get('create') === 'true' || requestedEditId) && <div className="mt-6"><JobForm job={editJob} onSave={saveJob} onCancel={() => router.push('/recruiter/jobs')} /></div>}<div className="mt-6 space-y-4">{jobs.length ? jobs.map((job) => <Card key={job.id} className="p-5"><div className="flex flex-col justify-between gap-4 sm:flex-row"><div><div className="flex flex-wrap items-center gap-2"><Link href={`/recruiter/jobs/${job.id}`}><h2 className="text-lg font-semibold hover:text-primary">{job.title}</h2></Link><Badge variant="success">Open</Badge></div><p className="mt-1 text-sm text-muted-foreground">{job.location} · {job.type}</p><p className="mt-3 text-sm leading-relaxed text-slate-400">{job.description}</p><div className="mt-3 flex flex-wrap gap-2">{job.skills.split(',').filter(Boolean).map((skill) => <Badge key={skill} variant="muted">{skill.trim()}</Badge>)}</div></div><div className="flex h-fit flex-wrap gap-2"><Link href={`/recruiter/jobs/${job.id}/applicants`}><Button variant="ghost" size="sm"><Users size={14} /> Applicants</Button></Link><Link href={`/recruiter/jobs/${job.id}/edit`}><Button variant="ghost" size="sm"><Edit3 size={14} /> Edit</Button></Link><Button variant="ghost" size="sm" onClick={() => deleteJob(job.id)}><Trash2 size={14} /> Delete</Button></div></div></Card>) : <Card className="text-center"><BriefcaseBusiness className="mx-auto h-10 w-10 text-muted-foreground" /><h2 className="mt-4 text-lg font-semibold">No jobs posted</h2><p className="mt-2 text-sm text-muted-foreground">Create your first role to start building a candidate pipeline.</p></Card>}</div></>}
-    {requestedView === 'directory' && (directoryProfileId ? <CandidateFullProfile application={applications.find(a=>a.id===directoryProfileId)!} onClose={()=>setDirectoryProfileId(null)}/> : <CandidateDirectory applications={applications} rankings={rankings} onViewProfile={setDirectoryProfileId}/>)}
+    {requestedView === 'directory' && (directoryProfileId ? <CandidateFullProfile candidateId={directoryProfileId} onClose={()=>setDirectoryProfileId(null)} /> : <CandidateDirectory candidates={directoryCandidates} loading={isDirectoryLoading} error={directoryError} onViewProfile={setDirectoryProfileId} />)}
     {requestedView === 'applicants' && <><Badge variant="default">Candidate pipeline</Badge><h1 className="mt-4 text-3xl font-bold">{requestedJobId ? detailJob?.title || 'Job applicants' : 'Applicants'}</h1><p className="mt-2 text-slate-400">Review resumes, extracted projects, and AI candidate rankings.</p><div className="mt-4 flex items-center gap-3 bg-black/20 p-2.5 rounded-xl border border-border max-w-xl"><Search size={16} className="text-slate-400 ml-1" /><input value={techSearch} onChange={(e) => setTechSearch(e.target.value)} placeholder="Search candidates by project technology (e.g. React, Python, Docker)..." className="bg-transparent text-sm text-white outline-none w-full placeholder:text-slate-500" />{techSearch && <Button variant="ghost" size="sm" onClick={() => setTechSearch('')}>Clear</Button>}</div>{requestedJobId && <Link className="mt-4 inline-block" href={`/recruiter/jobs/${requestedJobId}`}><Button variant="ghost" size="sm"><ArrowLeft size={15} /> Job details</Button></Link>}{selectedApplicant && <Card className="mt-5 border border-primary/30"><div className="flex items-start justify-between gap-4"><div><h2 className="text-lg font-semibold">{selectedApplicant.candidateName}</h2><p className="mt-1 text-sm text-muted-foreground">{selectedApplicant.resumeName} · Applied {new Date(selectedApplicant.appliedAt).toLocaleDateString()}</p><div className="mt-3 flex flex-wrap gap-2"><Badge variant="accent">Talent {selectedApplicant.talentScore}</Badge><Badge variant="success">ATS {selectedApplicant.atsScore}</Badge>{selectedApplicant.skills.map((skill) => <Badge key={skill} variant="muted">{skill}</Badge>)}</div>{selectedApplicant.analysis && (() => { const prof = getVerifiedSkillProfile(selectedApplicant.analysis); const projs = extractProjectsFromReport(selectedApplicant.analysis); return <div className="mt-4 border-t border-border pt-3 space-y-3"><div className="flex items-center gap-2"><h4 className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1"><ShieldCheck className="text-primary" size={14} /> Verified Skill Profile ({prof.candidateLevel} Level)</h4><Badge variant="success" className="text-[10px]">Confidence {prof.overallConfidence}%</Badge></div><div className="flex flex-wrap gap-1.5">{prof.topStrongestSkills.map(s => <Badge key={s.name} variant="success" className="text-xs">{s.name} ({s.level} · {s.confidence}%)</Badge>)}</div><div className="pt-2"><h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-2 flex items-center gap-1"><FolderGit2 className="text-primary" size={14} /> Extracted Projects ({projs.length})</h4><div className="space-y-2">{projs.map(p => <ProjectCard key={p.id} project={p} isRecruiterView />)}</div></div></div>; })()}</div><Link href={requestedJobId ? `/recruiter/jobs/${requestedJobId}/applicants` : '/recruiter/applicants'}><Button variant="ghost" size="sm">Close profile</Button></Link></div></Card>}<div className="mt-5 space-y-4">{sortedApplications.length ? sortedApplications.map((application) => <ApplicantRankingCard key={application.id} application={application} job={getMappedJob(application.jobId)} updateApplication={updateApplication} ranking={rankings[application.id]} isLoadingRanking={!!loadingRankings[application.id]} error={rankingErrors[application.id]} />) : <Card className="text-center"><Users className="mx-auto h-10 w-10 text-muted-foreground" /><h2 className="mt-4 text-lg font-semibold">No matching applicants</h2><p className="mt-2 text-sm text-muted-foreground">Try adjusting your technology search term or selection filter.</p></Card>}</div></>}
     {requestedView === 'hackathons' && <HackathonsPipeline />}
     {requestedView === 'company' && <><Badge variant="success">Company profile</Badge><h1 className="mt-4 text-3xl font-bold">Your company</h1><p className="mt-2 text-slate-400">Keep this profile current for better candidate context.</p><Card className="mt-6"><form className="grid gap-4 md:grid-cols-2" onSubmit={(event) => { event.preventDefault(); sessionStorage.setItem('talentai_company', JSON.stringify(company)); }}><label className="text-sm text-slate-300">Company name<input required value={company.name} onChange={(e) => setCompany({ ...company, name: e.target.value })} className="mt-1.5 w-full rounded-xl border border-border bg-black/20 px-3 py-2.5 text-white outline-none focus:border-primary" /></label><label className="text-sm text-slate-300">Industry<input value={company.industry} onChange={(e) => setCompany({ ...company, industry: e.target.value })} className="mt-1.5 w-full rounded-xl border border-border bg-black/20 px-3 py-2.5 text-white outline-none focus:border-primary" placeholder="Technology" /></label><label className="text-sm text-slate-300">Location<input value={company.location} onChange={(e) => setCompany({ ...company, location: e.target.value })} className="mt-1.5 w-full rounded-xl border border-border bg-black/20 px-3 py-2.5 text-white outline-none focus:border-primary" placeholder="Mumbai, India" /></label><label className="text-sm text-slate-300">Website<input type="url" value={company.website} onChange={(e) => setCompany({ ...company, website: e.target.value })} className="mt-1.5 w-full rounded-xl border border-border bg-black/20 px-3 py-2.5 text-white outline-none focus:border-primary" placeholder="https://example.com" /></label><label className="text-sm text-slate-300 md:col-span-2">About the company<textarea rows={5} value={company.description} onChange={(e) => setCompany({ ...company, description: e.target.value })} className="mt-1.5 w-full resize-y rounded-xl border border-border bg-black/20 px-3 py-2.5 text-white outline-none focus:border-primary" placeholder="Tell candidates about your mission and culture." /></label><div className="md:col-span-2"><Button type="submit"><Save size={16} /> Save profile</Button></div></form></Card></>}

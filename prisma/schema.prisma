@@ -21,12 +21,13 @@ enum UserRole {
 
 model User {
   id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         UserRole @default(CANDIDATE)
+  name         String   @unique
+  email        String?  @unique
+  profilePhoto String?
+  role         String   @default("RECRUITER")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  resumes      Resume[]
 }
 
 model Resume {
@@ -37,8 +38,12 @@ model Resume {
   fileData      Bytes
   extractedText String
   pageCount     Int
+  userId        String?
   createdAt     DateTime        @default(now())
   analysis      ResumeAnalysis?
+  user          User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
 }
 
 model ResumeAnalysis {
