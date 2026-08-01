@@ -52,8 +52,8 @@ export function ProjectFormModal({ project, onSave, onClose }: ProjectFormModalP
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       <Card className="w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 border border-primary/30 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
-          <h2 className="text-xl font-bold text-white">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-4">
+          <h2 className="text-xl font-bold text-slate-900">
             {project ? 'Edit Extracted Project' : 'Add Project Manually'}
           </h2>
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -63,94 +63,94 @@ export function ProjectFormModal({ project, onSave, onClose }: ProjectFormModalP
 
         <form onSubmit={handleSubmit} className="space-y-4 text-sm">
           <div>
-            <label className="block text-slate-300 font-medium mb-1">Project Title *</label>
+            <label className="block text-slate-700 font-medium mb-1">Project Title *</label>
             <input
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-xl border border-border bg-black/20 px-3.5 py-2 text-white outline-none focus:border-primary"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-slate-900 outline-none focus:border-primary"
               placeholder="e.g. AI-Powered Analytics Engine"
             />
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-300 font-medium mb-1">Candidate Role</label>
+              <label className="block text-slate-700 font-medium mb-1">Candidate Role</label>
               <input
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className="w-full rounded-xl border border-border bg-black/20 px-3 py-2 text-white outline-none focus:border-primary"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900 outline-none focus:border-primary"
                 placeholder="e.g. Lead Full Stack Developer"
               />
             </div>
             <div>
-              <label className="block text-slate-300 font-medium mb-1">Duration</label>
+              <label className="block text-slate-700 font-medium mb-1">Duration</label>
               <input
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="w-full rounded-xl border border-border bg-black/20 px-3 py-2 text-white outline-none focus:border-primary"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900 outline-none focus:border-primary"
                 placeholder="e.g. 4 Months"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-slate-300 font-medium mb-1">Short Description *</label>
+            <label className="block text-slate-700 font-medium mb-1">Short Description *</label>
             <textarea
               required
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-xl border border-border bg-black/20 px-3.5 py-2 text-white outline-none focus:border-primary resize-y"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-slate-900 outline-none focus:border-primary resize-y"
               placeholder="Describe the objective, architecture, and overall solution..."
             />
           </div>
 
           <div>
-            <label className="block text-slate-300 font-medium mb-1">Technologies Used (comma separated)</label>
+            <label className="block text-slate-700 font-medium mb-1">Technologies Used (comma separated)</label>
             <input
               value={technologies}
               onChange={(e) => setTechnologies(e.target.value)}
-              className="w-full rounded-xl border border-border bg-black/20 px-3.5 py-2 text-white outline-none focus:border-primary"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-slate-900 outline-none focus:border-primary"
               placeholder="React, TypeScript, Next.js, Node.js, PostgreSQL"
             />
           </div>
 
           <div>
-            <label className="block text-slate-300 font-medium mb-1">Key Features (one per line)</label>
+            <label className="block text-slate-700 font-medium mb-1">Key Features (one per line)</label>
             <textarea
               rows={3}
               value={keyFeatures}
               onChange={(e) => setKeyFeatures(e.target.value)}
-              className="w-full rounded-xl border border-border bg-black/20 px-3.5 py-2 text-white outline-none focus:border-primary resize-y"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-slate-900 outline-none focus:border-primary resize-y"
               placeholder="Implemented real-time WebSocket connection&#10;Optimized database index queries by 40%&#10;Integrated OAuth 2.0 authentication"
             />
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-300 font-medium mb-1">GitHub Link (optional)</label>
+              <label className="block text-slate-700 font-medium mb-1">GitHub Link (optional)</label>
               <input
                 type="url"
                 value={githubUrl}
                 onChange={(e) => setGithubUrl(e.target.value)}
-                className="w-full rounded-xl border border-border bg-black/20 px-3 py-2 text-white outline-none focus:border-primary"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900 outline-none focus:border-primary"
                 placeholder="https://github.com/username/project"
               />
             </div>
             <div>
-              <label className="block text-slate-300 font-medium mb-1">Live Demo Link (optional)</label>
+              <label className="block text-slate-700 font-medium mb-1">Live Demo Link (optional)</label>
               <input
                 type="url"
                 value={liveDemoUrl}
                 onChange={(e) => setLiveDemoUrl(e.target.value)}
-                className="w-full rounded-xl border border-border bg-black/20 px-3 py-2 text-white outline-none focus:border-primary"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900 outline-none focus:border-primary"
                 placeholder="https://my-demo-app.vercel.app"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-border">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>

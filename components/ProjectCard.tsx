@@ -18,13 +18,13 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
       <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               🏷️ {project.title}
             </h3>
             {project.role && <Badge variant="accent" className="text-xs">{project.role}</Badge>}
             {project.duration && <Badge variant="muted" className="text-xs">{project.duration}</Badge>}
           </div>
-          <p className="mt-2 text-sm text-slate-300 leading-relaxed">
+          <p className="mt-2 text-sm text-slate-700 leading-relaxed">
             📝 {project.description}
           </p>
         </div>
@@ -36,7 +36,7 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
               href={project.githubUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs text-slate-300 hover:text-white bg-black/30 border border-border px-2.5 py-1.5 rounded-lg"
+              className="flex items-center gap-1 text-xs text-slate-700 hover:text-slate-900 bg-slate-100 border border-slate-200 px-2.5 py-1.5 rounded-lg"
             >
               <Github size={13} /> GitHub
             </a>
@@ -58,7 +58,7 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
           )}
           {onDelete && (
             <Button variant="ghost" size="sm" onClick={() => onDelete(project.id)} title="Delete Project">
-              <Trash2 size={14} className="text-amber-400" />
+              <Trash2 size={14} className="text-danger-emphasis" />
             </Button>
           )}
         </div>
@@ -66,7 +66,7 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
 
       {/* Tech Stack Badges */}
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        <span className="text-xs font-medium text-slate-400 mr-1">💻 Tech Stack:</span>
+        <span className="text-xs font-medium text-slate-600 mr-1">💻 Tech Stack:</span>
         {project.technologies.map((tech) => (
           <Badge key={tech} variant="default" className="text-xs">
             {tech}
@@ -75,34 +75,34 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
       </div>
 
       {/* AI Insights & Recruiter Summary */}
-      <div className="mt-4 pt-4 border-t border-border/60 grid md:grid-cols-2 gap-4">
-        <div className="space-y-2 bg-black/20 p-3 rounded-xl border border-border">
+      <div className="mt-4 pt-4 border-t border-slate-200/60 grid md:grid-cols-2 gap-4">
+        <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-300 flex items-center gap-1"><Sparkles size={13} className="text-amber-400" /> ⭐ AI Innovation Score</span>
-            <span className="font-bold text-amber-400">{project.innovationScore}%</span>
+            <span className="text-slate-700 flex items-center gap-1"><Sparkles size={13} className="text-warning-emphasis" /> ⭐ AI Innovation Score</span>
+            <span className="font-bold text-warning-emphasis">{project.innovationScore}%</span>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-300 flex items-center gap-1"><Brain size={13} className="text-accent" /> 🧠 Technical Complexity</span>
-            <span className="font-bold text-accent">{project.technicalComplexity}%</span>
+            <span className="text-slate-700 flex items-center gap-1"><Brain size={13} className="text-accent-emphasis" /> 🧠 Technical Complexity</span>
+            <span className="font-bold text-accent-emphasis">{project.technicalComplexity}%</span>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-300 flex items-center gap-1"><Code2 size={13} className="text-emerald-400" /> Problem Solving</span>
-            <span className="font-bold text-emerald-400">{project.problemSolvingScore}%</span>
+            <span className="text-slate-700 flex items-center gap-1"><Code2 size={13} className="text-success-emphasis" /> Problem Solving</span>
+            <span className="font-bold text-success-emphasis">{project.problemSolvingScore}%</span>
           </div>
         </div>
 
-        <div className="bg-black/20 p-3 rounded-xl border border-border flex flex-col justify-between">
+        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between">
           <div>
             <span className="text-xs font-semibold text-primary block mb-1 flex items-center gap-1">
               🎯 Recruiter Summary
             </span>
-            <p className="text-xs text-slate-300 leading-relaxed italic">
+            <p className="text-xs text-slate-700 leading-relaxed italic">
               "{project.recruiterSummary}"
             </p>
           </div>
           <button
             onClick={() => setShowDetails(!showDetails)}
-            className="mt-2 text-[11px] text-slate-400 hover:text-white flex items-center gap-1 underline self-end"
+            className="mt-2 text-[11px] text-slate-600 hover:text-slate-900 flex items-center gap-1 underline self-end"
           >
             <Info size={11} /> {showDetails ? 'Hide details' : 'View key features & details'}
           </button>
@@ -111,9 +111,9 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
 
       {/* Expanded Key Features */}
       {showDetails && (
-        <div className="mt-4 p-3 bg-black/30 rounded-xl border border-border/80 text-xs space-y-2">
-          <p className="font-semibold text-slate-200">Key Features & Execution:</p>
-          <ul className="list-disc pl-4 space-y-1 text-slate-300">
+        <div className="mt-4 p-3 bg-slate-100 rounded-xl border border-slate-200/80 text-xs space-y-2">
+          <p className="font-semibold text-slate-900">Key Features & Execution:</p>
+          <ul className="list-disc pl-4 space-y-1 text-slate-700">
             {project.keyFeatures.map((feat, idx) => (
               <li key={idx}>{feat}</li>
             ))}

@@ -10,14 +10,37 @@ interface CardProps {
   children: ReactNode;
   className?: string;
   hover?: boolean;
+  accentTop?: boolean;
+  accentLeft?: boolean;
+  accentColor?: 'primary' | 'secondary' | 'accent' | 'success' | 'warning' | 'danger';
 }
 
-export function Card({ children, className, hover = false }: CardProps) {
+const accentTopColors = {
+  primary: 'border-t-4 border-t-primary',
+  secondary: 'border-t-4 border-t-secondary',
+  accent: 'border-t-4 border-t-accent',
+  success: 'border-t-4 border-t-success',
+  warning: 'border-t-4 border-t-warning',
+  danger: 'border-t-4 border-t-danger',
+};
+
+const accentLeftColors = {
+  primary: 'border-l-4 border-l-primary',
+  secondary: 'border-l-4 border-l-secondary',
+  accent: 'border-l-4 border-l-accent',
+  success: 'border-l-4 border-l-success',
+  warning: 'border-l-4 border-l-warning',
+  danger: 'border-l-4 border-l-danger',
+};
+
+export function Card({ children, className, hover = false, accentTop, accentLeft, accentColor = 'primary' }: CardProps) {
   return (
     <div
       className={cn(
-        'surface-card rounded-2xl p-6',
-        hover && 'transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-glow',
+        'surface-card rounded-2xl p-6 overflow-hidden',
+        hover && 'transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
+        accentTop && accentTopColors[accentColor],
+        accentLeft && accentLeftColors[accentColor],
         className,
       )}
     >
@@ -31,15 +54,15 @@ export function Card({ children, className, hover = false }: CardProps) {
    ───────────────────────────────────────────── */
 
 const badgeVariants = cva(
-  'inline-flex items-center rounded-md border px-2 py-1 text-[11px] font-semibold tracking-[0.01em] transition-colors',
+  'inline-flex items-center rounded-lg border px-2 py-1 text-[11px] font-semibold tracking-[0.01em] transition-colors',
   {
     variants: {
       variant: {
-        default: 'border-primary/25 bg-primary/10 text-violet-200',
-        accent: 'border-accent/25 bg-accent/10 text-teal-200',
-        success: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300',
-        warning: 'border-amber-400/20 bg-amber-400/10 text-amber-300',
-        muted: 'border-border bg-muted/60 text-slate-400',
+        default: 'border-primary/20 bg-primary-subtle text-primary-emphasis',
+        accent: 'border-accent/25 bg-accent-subtle text-accent-emphasis',
+        success: 'border-success/25 bg-success-subtle text-success-emphasis',
+        warning: 'border-warning/25 bg-warning-subtle text-warning-emphasis',
+        muted: 'border-border bg-muted text-muted-foreground',
       },
     },
     defaultVariants: {
@@ -66,16 +89,16 @@ export function Badge({ children, variant, className }: BadgeProps) {
    ───────────────────────────────────────────── */
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
         primary:
-          'bg-primary text-white shadow-[0_10px_22px_rgba(118,87,246,0.26)] hover:bg-[#866df8] hover:shadow-[0_14px_30px_rgba(118,87,246,0.34)] active:scale-[0.98]',
+          'bg-primary text-primary-foreground shadow-sm hover:bg-primary-emphasis hover:shadow-md active:scale-[0.98] border border-primary-emphasis/20',
         ghost:
-          'border border-border bg-transparent text-slate-300 hover:border-slate-500/50 hover:bg-white/[0.04] hover:text-white',
+          'border border-transparent bg-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-900',
         outline:
-          'border border-primary/45 bg-primary/[0.05] text-violet-200 hover:bg-primary/15',
+          'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 hover:border-slate-400 shadow-sm',
       },
       size: {
         sm: 'px-3 py-2 text-sm',
@@ -127,8 +150,8 @@ interface ProgressProps {
 const progressColors = {
   primary: 'bg-primary',
   accent: 'bg-accent',
-  success: 'bg-emerald-500',
-  warning: 'bg-amber-500',
+  success: 'bg-success',
+  warning: 'bg-warning',
 };
 
 export function Progress({
@@ -145,11 +168,11 @@ export function Progress({
     <div className={cn('mb-3', className)}>
       {(label || showValue) && (
         <div className="mb-1.5 flex justify-between text-sm">
-          {label && <span className="text-slate-300">{label}</span>}
-          {showValue && <span className="font-medium text-slate-200">{value}%</span>}
+          {label && <span className="font-medium text-slate-700">{label}</span>}
+          {showValue && <span className="font-bold text-slate-900">{value}%</span>}
         </div>
       )}
-      <div className="h-2 overflow-hidden rounded-full bg-slate-800/90 ring-1 ring-white/[0.03]">
+      <div className="h-2 overflow-hidden rounded-full bg-slate-200 ring-1 ring-slate-900/5">
         <div
           className={cn(
             'h-full rounded-full transition-all duration-500 ease-out',
@@ -194,7 +217,7 @@ export function ScoreCircle({ value, label, size = 'md', className }: ScoreCircl
             cy={svgSize / 2}
             r={config.radius}
             fill="none"
-            stroke="rgba(100, 116, 139, 0.38)"
+            stroke="rgba(15, 23, 42, 0.1)"
             strokeWidth={config.stroke}
           />
           <circle
@@ -202,25 +225,19 @@ export function ScoreCircle({ value, label, size = 'md', className }: ScoreCircl
             cy={svgSize / 2}
             r={config.radius}
             fill="none"
-            stroke="url(#scoreGradient)"
+            stroke="#6D28D9"
             strokeWidth={config.stroke}
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
             className="transition-all duration-1000 ease-out"
           />
-          <defs>
-            <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#7657f6" />
-              <stop offset="100%" stopColor="#2dd4ff" />
-            </linearGradient>
-          </defs>
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className={cn('font-bold text-white', config.text)}>{value}</span>
+          <span className={cn('font-bold text-slate-900', config.text)}>{value}</span>
         </div>
       </div>
-      <span className={cn('font-medium text-muted-foreground', config.label)}>{label}</span>
+      <span className={cn('font-medium text-slate-700', config.label)}>{label}</span>
     </div>
   );
 }
