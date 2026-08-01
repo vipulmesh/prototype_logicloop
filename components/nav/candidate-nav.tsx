@@ -14,7 +14,7 @@ export function CandidateNav() {
   };
 
   return (
-    <nav className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-6">
+    <nav className="enterprise-nav relative z-10 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-6">
       <Logo />
       <div className="hidden items-center gap-7 text-sm text-slate-400 md:flex">
         <Link className="text-slate-200" href="/candidate">For candidates</Link>

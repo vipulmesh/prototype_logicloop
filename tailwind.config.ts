@@ -9,20 +9,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#070b14',
-        surface: '#0d1525',
-        'surface-light': '#111b2e',
-        border: 'rgba(148, 163, 184, 0.12)',
+        background: '#090d1a',
+        surface: '#11172a',
+        'surface-light': '#18213a',
+        border: 'rgba(148, 163, 184, 0.18)',
         primary: {
-          DEFAULT: '#06b6d4',
+          DEFAULT: '#7657f6',
           foreground: '#ffffff',
         },
         accent: {
-          DEFAULT: '#8b5cf6',
+          DEFAULT: '#14c8a2',
           foreground: '#ffffff',
         },
         muted: {
-          DEFAULT: '#1e293b',
+          DEFAULT: '#1a2339',
           foreground: '#94a3b8',
         },
       },
@@ -30,12 +30,12 @@ export default {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       borderRadius: {
-        xl: '1rem',
-        '2xl': '1.25rem',
+        xl: '0.875rem',
+        '2xl': '1rem',
       },
       boxShadow: {
-        glow: '0 0 50px rgba(6, 182, 212, 0.12)',
-        'glow-accent': '0 0 50px rgba(139, 92, 246, 0.12)',
+        glow: '0 20px 48px rgba(118, 87, 246, 0.18)',
+        'glow-accent': '0 20px 48px rgba(20, 200, 162, 0.14)',
       },
       animation: {
         'fade-in': 'fadeIn 0.6s ease-out forwards',

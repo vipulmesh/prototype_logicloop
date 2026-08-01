@@ -16,8 +16,8 @@ export function Card({ children, className, hover = false }: CardProps) {
   return (
     <div
       className={cn(
-        'glass rounded-2xl p-6',
-        hover && 'transition-all duration-300 hover:border-primary/30 hover:shadow-glow hover:-translate-y-0.5',
+        'surface-card rounded-2xl p-6',
+        hover && 'transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-glow',
         className,
       )}
     >
@@ -31,15 +31,15 @@ export function Card({ children, className, hover = false }: CardProps) {
    ───────────────────────────────────────────── */
 
 const badgeVariants = cva(
-  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors',
+  'inline-flex items-center rounded-md border px-2 py-1 text-[11px] font-semibold tracking-[0.01em] transition-colors',
   {
     variants: {
       variant: {
-        default: 'border-primary/20 bg-primary/10 text-primary',
-        accent: 'border-accent/20 bg-accent/10 text-accent',
-        success: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-400',
-        warning: 'border-amber-400/20 bg-amber-400/10 text-amber-400',
-        muted: 'border-border bg-muted text-muted-foreground',
+        default: 'border-primary/25 bg-primary/10 text-violet-200',
+        accent: 'border-accent/25 bg-accent/10 text-teal-200',
+        success: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300',
+        warning: 'border-amber-400/20 bg-amber-400/10 text-amber-300',
+        muted: 'border-border bg-muted/60 text-slate-400',
       },
     },
     defaultVariants: {
@@ -66,16 +66,16 @@ export function Badge({ children, variant, className }: BadgeProps) {
    ───────────────────────────────────────────── */
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none',
+  'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
         primary:
-          'bg-gradient-to-r from-primary to-accent text-white hover:brightness-110 hover:-translate-y-0.5 active:translate-y-0',
+          'bg-primary text-white shadow-[0_10px_22px_rgba(118,87,246,0.26)] hover:bg-[#866df8] hover:shadow-[0_14px_30px_rgba(118,87,246,0.34)] active:scale-[0.98]',
         ghost:
-          'border border-border text-slate-300 hover:bg-white/5 hover:border-primary/30',
+          'border border-border bg-transparent text-slate-300 hover:border-slate-500/50 hover:bg-white/[0.04] hover:text-white',
         outline:
-          'border border-primary/40 text-primary hover:bg-primary/10',
+          'border border-primary/45 bg-primary/[0.05] text-violet-200 hover:bg-primary/15',
       },
       size: {
         sm: 'px-3 py-2 text-sm',
@@ -125,10 +125,10 @@ interface ProgressProps {
 }
 
 const progressColors = {
-  primary: 'from-primary to-cyan-400',
-  accent: 'from-accent to-purple-400',
-  success: 'from-emerald-500 to-emerald-400',
-  warning: 'from-amber-500 to-amber-400',
+  primary: 'bg-primary',
+  accent: 'bg-accent',
+  success: 'bg-emerald-500',
+  warning: 'bg-amber-500',
 };
 
 export function Progress({
@@ -149,10 +149,10 @@ export function Progress({
           {showValue && <span className="font-medium text-slate-200">{value}%</span>}
         </div>
       )}
-      <div className="h-2 overflow-hidden rounded-full bg-slate-800/80">
+      <div className="h-2 overflow-hidden rounded-full bg-slate-800/90 ring-1 ring-white/[0.03]">
         <div
           className={cn(
-            'h-full rounded-full bg-gradient-to-r transition-all duration-700 ease-out',
+            'h-full rounded-full transition-all duration-500 ease-out',
             progressColors[color],
           )}
           style={{ width: `${percentage}%` }}
@@ -194,7 +194,7 @@ export function ScoreCircle({ value, label, size = 'md', className }: ScoreCircl
             cy={svgSize / 2}
             r={config.radius}
             fill="none"
-            stroke="rgba(30, 41, 59, 0.8)"
+            stroke="rgba(100, 116, 139, 0.38)"
             strokeWidth={config.stroke}
           />
           <circle
@@ -211,8 +211,8 @@ export function ScoreCircle({ value, label, size = 'md', className }: ScoreCircl
           />
           <defs>
             <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#06b6d4" />
-              <stop offset="100%" stopColor="#8b5cf6" />
+              <stop offset="0%" stopColor="#7657f6" />
+              <stop offset="100%" stopColor="#2dd4ff" />
             </linearGradient>
           </defs>
         </svg>
