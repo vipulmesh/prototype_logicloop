@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState, useRef } from 'react';
+import { FormEvent, Suspense, useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -610,7 +610,15 @@ function ApplicantRankingCard({
   );
 }
 
-export default function RecruiterPortal() {
+export default function RecruiterPortalPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" /> }>
+      <RecruiterPortal />
+    </Suspense>
+  );
+}
+
+function RecruiterPortal() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const viewParam = searchParams.get('view');
@@ -631,7 +639,22 @@ export default function RecruiterPortal() {
   const rankingTracker = useRef(new Set<string>());
 
   useEffect(() => {
-    setRecruiterName(sessionStorage.getItem('talentai_recruiter') || '');
+    const cookieValue = document.cookie
+      .split('; ')
+      .find((entry) => entry.startsWith('talentai_session='))
+      ?.split('=')[1];
+
+    if (cookieValue) {
+      try {
+        const session = JSON.parse(decodeURIComponent(cookieValue)) as { name?: string };
+        setRecruiterName(session.name || '');
+      } catch {
+        setRecruiterName('');
+      }
+    } else {
+      setRecruiterName('');
+    }
+
     setCompany(readSession('talentai_company', defaultCompany));
     void Promise.all([getAvailableJobs(), getApplications()]).then(([availableJobs, savedApplications]) => {
       setJobs(availableJobs.map((job) => ({ ...job, skills: job.skills.join(','), createdAt: new Date().toISOString() })));
@@ -660,21 +683,31 @@ export default function RecruiterPortal() {
   };
   const login = async (event: FormEvent) => {
     event.preventDefault();
-    const name = loginName.trim();
-    if (!name) return;
+    const email = loginName.trim();
+    if (!email) return;
 
-    const response = await fetch('/api/users', {
+    const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ email, password: 'demo123', role: 'RECRUITER' }),
     });
 
     if (response.ok) {
-      sessionStorage.setItem('talentai_recruiter', name);
+      const data = (await response.json()) as { user?: { name?: string } };
+      const name = data.user?.name ?? email;
       setRecruiterName(name);
+      router.push('/recruiter?view=dashboard');
+      return;
     }
+
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    alert(data.error ?? 'Unable to sign in.');
   };
-  const logout = () => { sessionStorage.removeItem('talentai_recruiter'); router.push('/recruiter'); };
+  const logout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setRecruiterName('');
+    router.push('/recruiter/login');
+  };
   const editJob = jobs.find((job) => job.id === requestedEditId) ?? null;
   const detailJob = jobs.find((job) => job.id === requestedJobId) ?? null;
   const filteredApplications = applications.filter((application) => {

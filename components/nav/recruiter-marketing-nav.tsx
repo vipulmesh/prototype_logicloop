@@ -13,7 +13,7 @@ export function RecruiterMarketingNav() {
       </div>
       <div className="flex items-center gap-2">
         <Link href="/"><Button variant="ghost" size="sm">Home</Button></Link>
-        <Link href="/recruiter"><Button size="sm">Log in</Button></Link>
+        <Link href="/recruiter/login"><Button size="sm">Log in</Button></Link>
       </div>
     </nav>
   );

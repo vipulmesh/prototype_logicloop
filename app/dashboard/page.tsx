@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   AlertCircle,
@@ -77,6 +78,7 @@ const getHash = (str: string) => {
 interface ContributionAnalytics { score: number; projects: number; contributions: number; commits: number; pullRequests: number; recentActivity: { repo: string; action: string; date: string }[]; }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [resume, setResume] = useState<StoredResume | null>(null);
   const [report, setReport] = useState<TalentReport | null>(null);
   const [projects, setProjects] = useState<CandidateProject[]>([]);
