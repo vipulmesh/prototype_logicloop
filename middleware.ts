@@ -22,15 +22,19 @@ export function middleware(request: NextRequest) {
 
   if (isProtectedCandidatePath(pathname)) {
     if (!session || session.role !== 'CANDIDATE') {
+      console.warn('Candidate route denied', { pathname, sessionRole: session?.role ?? null });
       return NextResponse.redirect(new URL('/candidate/login', request.url));
     }
+    console.info('Candidate route allowed', { pathname, userId: session.id });
     return NextResponse.next();
   }
 
   if (isProtectedRecruiterPath(pathname)) {
     if (!session || session.role !== 'RECRUITER') {
+      console.warn('Recruiter route denied', { pathname, sessionRole: session?.role ?? null });
       return NextResponse.redirect(new URL('/recruiter/login', request.url));
     }
+    console.info('Recruiter route allowed', { pathname, userId: session.id });
     return NextResponse.next();
   }
 

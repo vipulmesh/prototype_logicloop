@@ -40,6 +40,31 @@ interface RecruiterJob {
   createdAt: string;
 }
 
+function RecruiterAccess({ onSuccess }: { onSuccess: (name: string) => void }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password, role: 'RECRUITER' }) });
+      const data = await response.json().catch(() => ({})) as { error?: string; user?: { name?: string } };
+      if (!response.ok) throw new Error(data.error || 'Unable to sign in.');
+      onSuccess(data.user?.name || email);
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'Unable to sign in.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return <Card className="w-full max-w-md p-6 sm:p-8"><Badge variant="accent">Recruiter access</Badge><h2 className="mt-4 text-2xl font-bold text-white">Log in</h2><p className="mt-2 text-sm leading-6 text-slate-400">Use the recruiter account you registered.</p><form className="mt-6 space-y-4" onSubmit={submit}><label className="block text-sm text-slate-300">Email<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-black/20 px-3 py-2.5 text-white outline-none focus:border-primary" placeholder="recruiter@company.com" /></label><label className="block text-sm text-slate-300">Password<input type="password" required value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-black/20 px-3 py-2.5 text-white outline-none focus:border-primary" placeholder="••••••••" /></label>{error && <p className="text-sm text-rose-400">{error}</p>}<Button className="w-full" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Signing in...' : 'Continue to recruiter portal'}</Button></form><p className="mt-5 text-center text-sm text-slate-400">Need an account? <Link href="/recruiter/register" className="text-primary hover:underline">Register here</Link></p></Card>;
+}
+
 interface DiscoverySkill { name: string; level: 'Beginner' | 'Intermediate' | 'Advanced'; confidence: number; }
 interface DiscoveryCandidate {
   id: string; name: string; email: string | null; profilePhoto: string | null; registeredAt: string;
@@ -692,28 +717,30 @@ function RecruiterPortal() {
   const rankingTracker = useRef(new Set<string>());
 
   useEffect(() => {
-    const cookieValue = document.cookie
-      .split('; ')
-      .find((entry) => entry.startsWith('talentai_session='))
-      ?.split('=')[1];
-
-    if (cookieValue) {
-      try {
-        const session = JSON.parse(decodeURIComponent(cookieValue)) as { name?: string };
-        setRecruiterName(session.name || '');
-      } catch {
+    let active = true;
+    setCompany(readSession('talentai_company', defaultCompany));
+    void Promise.all([
+      fetch('/api/auth/session').then(async (response) => ({ response, data: await response.json().catch(() => ({})) })),
+      getAvailableJobs(),
+      getApplications(),
+    ]).then(([sessionResult, availableJobs, savedApplications]) => {
+      const session = sessionResult.data as { user?: { name?: string; role?: string } };
+      if (sessionResult.response.ok && session.user?.role === 'RECRUITER') {
+        console.info('Recruiter client session restored', { role: session.user.role });
+        setRecruiterName(session.user.name || '');
+      } else {
+        console.warn('Recruiter client session unavailable or has the wrong role');
         setRecruiterName('');
       }
-    } else {
-      setRecruiterName('');
-    }
-
-    setCompany(readSession('talentai_company', defaultCompany));
-    void Promise.all([getAvailableJobs(), getApplications()]).then(([availableJobs, savedApplications]) => {
       setJobs(availableJobs.map((job) => ({ ...job, skills: job.skills.join(','), createdAt: new Date().toISOString() })));
       setApplications(savedApplications);
+    }).catch((error: unknown) => {
+      console.error('Recruiter client session restoration failed', error);
+      setRecruiterName('');
+    }).finally(() => {
+      if (active) setIsReady(true);
     });
-    setIsReady(true);
+    return () => { active = false; };
   }, [searchParams]);
 
   useEffect(() => {
@@ -870,6 +897,7 @@ function RecruiterPortal() {
   });
 
   if (!isReady) return null;
+  if (!recruiterName) return <div className="min-h-screen grid-bg"><main className="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-5 py-16 sm:px-6"><RecruiterAccess onSuccess={(name) => { setRecruiterName(name); router.push('/recruiter?view=dashboard'); }} /></main></div>;
   if (!recruiterName) return <div className="min-h-screen overflow-hidden bg-background"><div className="relative grid-bg"><div className="orb right-0 top-8 h-96 w-96 bg-accent" /><RecruiterMarketingNav /><main className="relative mx-auto max-w-7xl px-5 pb-20 pt-14 sm:px-6 md:pb-28 md:pt-24"><div className="grid items-center gap-12 lg:grid-cols-[1.1fr_.9fr]"><div><Badge variant="accent" className="px-3 py-1">Recruiter workspace</Badge><h1 className="mt-6 max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight text-white sm:text-5xl">Build a hiring process with <span className="text-gradient">better context.</span></h1><p className="mt-6 max-w-xl text-lg leading-8 text-slate-400">TalentAI brings job management, applicant review, and AI-assisted talent signals into one focused workspace for your team.</p><div className="mt-8 flex flex-wrap gap-3 text-sm text-slate-300"><span className="flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-400" />Manage open roles</span><span className="flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-400" />Review candidates</span><span className="flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-400" />Prioritize matches</span></div></div><Card className="p-6 sm:p-8"><Badge variant="accent">Recruiter access</Badge><h2 className="mt-4 text-2xl font-bold text-white">Log in or register</h2><p className="mt-2 text-sm leading-6 text-slate-400">Enter your name to open your recruiter workspace.</p><form className="mt-6" onSubmit={login}><label className="text-sm text-slate-300">Your name<input required value={loginName} onChange={(e) => setLoginName(e.target.value)} className="mt-1.5 w-full rounded-xl border border-border bg-black/20 px-3 py-2.5 text-white outline-none focus:border-primary" placeholder="Alex Morgan" /></label><Button className="mt-5 w-full" type="submit">Continue to recruiter portal</Button></form></Card></div></main></div><section className="mx-auto max-w-7xl px-5 py-20 sm:px-6 md:py-24"><div className="max-w-2xl"><p className="text-sm font-semibold text-accent">Designed for hiring teams</p><h2 className="mt-3 text-3xl font-bold tracking-tight text-white md:text-4xl">A clearer view of every candidate.</h2></div><div className="mt-10 grid gap-5 md:grid-cols-3">{[{ icon: BriefcaseBusiness, title: 'Manage open roles', text: 'Create and maintain job listings from a single workspace.' }, { icon: Users, title: 'Review candidate context', text: 'Explore applicants, their profiles, and the projects behind their experience.' }, { icon: BarChart3, title: 'Prioritize with AI signals', text: 'Use rankings and skill insights to focus on the strongest matches.' }].map((feature) => <Card key={feature.title} hover className="p-6"><feature.icon className="text-accent" size={22} /><h3 className="mt-5 text-lg font-semibold text-white">{feature.title}</h3><p className="mt-2 text-sm leading-6 text-slate-400">{feature.text}</p></Card>)}</div></section></div>;
 
   const navigation: { id: PortalView; label: string; href: string; icon: typeof BarChart3 }[] = [

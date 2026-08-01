@@ -1,8 +1,8 @@
 /*
   Warnings:
 
-  - Added the required column `email` to the `User` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `passwordHash` to the `User` table without a default value. This is not possible if the table is not empty.
+  Existing pre-auth users are retained. They receive an empty password hash and
+  must register/reset before they can sign in with a password.
 
 */
 -- RedefineTables
@@ -13,11 +13,13 @@ CREATE TABLE "new_User" (
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
-    "role" TEXT NOT NULL DEFAULT 'CANDIDATE',
+    "role" TEXT NOT NULL DEFAULT 'RECRUITER',
+    "profilePhoto" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
 );
-INSERT INTO "new_User" ("createdAt", "id", "name", "updatedAt") SELECT "createdAt", "id", "name", "updatedAt" FROM "User";
+INSERT INTO "new_User" ("createdAt", "email", "id", "name", "passwordHash", "profilePhoto", "role", "updatedAt")
+SELECT "createdAt", COALESCE("email", "id" || '@legacy.local'), "id", "name", '', "profilePhoto", "role", "updatedAt" FROM "User";
 DROP TABLE "User";
 ALTER TABLE "new_User" RENAME TO "User";
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
